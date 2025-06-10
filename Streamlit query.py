@@ -6,7 +6,10 @@ import cohere
 
 # Initialize Cohere Client
 COHERE_API_KEY = "YOUR_API_KEY"  # Replace with your actual API key
-co = cohere.Client(api_key=COHERE_API_KEY)
+try:
+    co = cohere.Client(api_key=COHERE_API_KEY)
+except Exception as e:
+    co = None
 
 # Directory to save Excel files
 EXCEL_DIRECTORY = os.path.expanduser("~/Desktop/Query_Answers")
@@ -143,38 +146,10 @@ def get_next_question(answer, current_question):
         return next_question.get(answer)
     return next_question
 
-# Function to save answers to an Excel file
-def save_answers_to_excel(user_answers, recommendation, ai_recommendation):
-    user_name = user_answers.get("name", "Unknown_User")
-    current_date = datetime.now().strftime("%d-%m-%Y")
-    file_name = f"{user_name}_{current_date}.xlsx"
-    file_path = os.path.join(EXCEL_DIRECTORY, file_name)
-
-    try:
-        workbook = openpyxl.Workbook()
-        sheet = workbook.active
-        sheet.title = "Réponses"
-
-        # Write questions and answers
-        sheet.cell(row=1, column=1, value="Question")
-        sheet.cell(row=1, column=2, value="Réponse")
-        for idx, (question, answer) in enumerate(user_answers.items(), start=2):
-            sheet.cell(row=idx, column=1, value=question)
-            sheet.cell(row=idx, column=2, value=answer)
-
-        # Write recommendations
-        sheet.cell(row=len(user_answers) + 2, column=1, value="Recommandations")
-        sheet.cell(row=len(user_answers) + 2, column=2, value=recommendation)
-        sheet.cell(row=len(user_answers) + 3, column=1, value="Recommandations IA")
-        sheet.cell(row=len(user_answers) + 3, column=2, value=ai_recommendation)
-
-        workbook.save(file_path)
-        st.success(f"Les réponses ont été enregistrées dans {file_path}")
-    except PermissionError:
-        st.error(f"Impossible d'enregistrer le fichier. Vérifiez les permissions pour le chemin : {file_path}")
-
 # Function to generate AI recommendations
 def get_ai_recommendation(answers):
+    if not co:
+        return "AI recommendations are unavailable. Please check your API key."
     try:
         prompt = "Voici les réponses d'un utilisateur à un questionnaire :\n"
         for question, answer in answers.items():
@@ -184,25 +159,6 @@ def get_ai_recommendation(answers):
         return response.generations[0].text.strip()
     except Exception as e:
         return f"Erreur lors de la génération des recommandations IA : {str(e)}"
-
-# Function to display recommendations
-def show_recommendation(user_answers):
-    recommendation = "Recommandations :\n"
-    if user_answers.get("product_code") == "Non":
-        recommendation += "- Assurez-vous de créer un nouveau code dans le système avant de passer commande.\n"
-    if user_answers.get("supplier_conditions") == "Oui":
-        recommendation += "- Analysez la consommation historique pour ajuster les hypothèses de réapprovisionnement.\n"
-    if user_answers.get("supplier_location") == "Grand export":
-        recommendation += "- Prévoir un délai logistique plus long et anticiper les commandes.\n"
-    if user_answers.get("dotation") == "Oui":
-        recommendation += "- Priorisez la planification logistique avec le 3PL pour respecter les délais impératifs.\n"
-
-    ai_recommendation = get_ai_recommendation(user_answers)
-    recommendation += f"\nRecommandations IA :\n{ai_recommendation}"
-
-    st.text_area("Recommandations", recommendation, height=200)
-    if st.button("Enregistrer les réponses"):
-        save_answers_to_excel(user_answers, recommendation, ai_recommendation)
 
 # Main Streamlit application
 def main():
@@ -226,16 +182,27 @@ def main():
         else:
             answer = st.text_input("Votre réponse :", key=current_question_key)
 
-        if st.button("Suivant"):
-            if answer:
-                # Save answer and move to the next question
-                st.session_state.user_answers[current_question_key] = answer
-                st.session_state.current_question = get_next_question(answer, current_question_key)
-            else:
-                st.warning("Veuillez entrer une réponse.")
+        # Automatically proceed to the next question
+        if answer:
+            st.session_state.user_answers[current_question_key] = answer
+            st.session_state.current_question = get_next_question(answer, current_question_key)
     else:
         # Show recommendations at the end
-        show_recommendation(st.session_state.user_answers)
+        user_answers = st.session_state.user_answers
+        recommendation = "Recommandations :\n"
+        if user_answers.get("product_code") == "Non":
+            recommendation += "- Assurez-vous de créer un nouveau code dans le système avant de passer commande.\n"
+        if user_answers.get("supplier_conditions") == "Oui":
+            recommendation += "- Analysez la consommation historique pour ajuster les hypothèses de réapprovisionnement.\n"
+        if user_answers.get("supplier_location") == "Grand export":
+            recommendation += "- Prévoir un délai logistique plus long et anticiper les commandes.\n"
+        if user_answers.get("dotation") == "Oui":
+            recommendation += "- Priorisez la planification logistique avec le 3PL pour respecter les délais impératifs.\n"
+
+        ai_recommendation = get_ai_recommendation(user_answers)
+        recommendation += f"\nRecommandations IA :\n{ai_recommendation}"
+
+        st.text_area("Recommandations", recommendation, height=200)
 
 if __name__ == "__main__":
     main()
