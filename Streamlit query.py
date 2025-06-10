@@ -1,4 +1,8 @@
 
+# Ensure the necessary libraries are installed before running the Streamlit app.
+# You can install the required libraries using the following commands:
+# pip install streamlit openpyxl cohere
+
 import streamlit as st
 import openpyxl
 import os
