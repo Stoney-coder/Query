@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import openpyxl
 import os
@@ -219,9 +218,9 @@ def main():
     if question_data:
         st.subheader(question_data["question"])
         if question_data["options"]:
-            answer = st.radio("Choisissez une option :", question_data["options"])
+            answer = st.radio("Choisissez une option :", question_data["options"], key=current_question_key)
         else:
-            answer = st.text_input("Votre réponse :")
+            answer = st.text_input("Votre réponse :", key=current_question_key)
 
         if st.button("Suivant"):
             if answer:
@@ -234,4 +233,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
