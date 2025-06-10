@@ -186,6 +186,7 @@ def main():
         if answer:
             st.session_state.user_answers[current_question_key] = answer
             st.session_state.current_question = get_next_question(answer, current_question_key)
+            st.experimental_rerun()  # Refresh the app to load the next question
     else:
         # Show recommendations at the end
         user_answers = st.session_state.user_answers
