@@ -5,17 +5,15 @@ from datetime import datetime
 import cohere
 
 # Initialize Cohere Client
-co = cohere.Client(api_key="YOUR_API_KEY")  # Replace with your actual API key
+COHERE_API_KEY = "YOUR_API_KEY"  # Replace with your actual API key
+co = cohere.Client(api_key=COHERE_API_KEY)
 
 # Directory to save Excel files
-excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
-os.makedirs(excel_directory, exist_ok=True)
+EXCEL_DIRECTORY = os.path.expanduser("~/Desktop/Query_Answers")
+os.makedirs(EXCEL_DIRECTORY, exist_ok=True)
 
-# Dictionary to store user answers
-user_answers = {}
-
-# Dictionary of questions and conditional answers
-questions = {
+# Questions and conditional answers
+QUESTIONS = {
     "name": {
         "question": "1.1. Quel est votre nom et prénom ? 😊",
         "options": []
@@ -102,118 +100,124 @@ questions = {
     }
 }
 
+# Mapping for next question logic
+NEXT_QUESTION_MAPPING = {
+    "name": "email",
+    "email": "business_unit",
+    "business_unit": "supplier_name",
+    "supplier_name": "product_code",
+    "product_code": {
+        "Oui": "product_code_yes",
+        "Non": "product_code_no"
+    },
+    "product_code_yes": "product_description",
+    "product_code_no": "product_description",
+    "product_description": "supplier_conditions",
+    "supplier_conditions": {
+        "Oui": "quantity_minimum_yes",
+        "Non": "coverage_duration"
+    },
+    "quantity_minimum_yes": "coverage_duration",
+    "coverage_duration": {
+        "Oui": "coverage_duration_yes",
+        "Non": "supplier_location"
+    },
+    "coverage_duration_yes": "supplier_location",
+    "supplier_location": "availability_delay",
+    "availability_delay": "storage_location",
+    "storage_location": "sku_open",
+    "sku_open": "sku_frequency",
+    "sku_frequency": "dotation",
+    "dotation": {
+        "Oui": "dotation_yes",
+        "Non": "additional_requirements"
+    },
+    "dotation_yes": "additional_requirements",
+    "additional_requirements": "final"
+}
+
 # Function to determine the next question
-def get_next_question(answer, previous_question):
-    mapping = {
-        "name": "email",
-        "email": "business_unit",
-        "business_unit": "supplier_name",
-        "supplier_name": "product_code",
-        "product_code": {
-            "Oui": "product_code_yes",
-            "Non": "product_code_no"
-        },
-        "product_code_yes": "product_description",
-        "product_code_no": "product_description",
-        "product_description": "supplier_conditions",
-        "supplier_conditions": {
-            "Oui": "quantity_minimum_yes",
-            "Non": "coverage_duration"
-        },
-        "quantity_minimum_yes": "coverage_duration",
-        "coverage_duration": {
-            "Oui": "coverage_duration_yes",
-            "Non": "supplier_location"
-        },
-        "coverage_duration_yes": "supplier_location",
-        "supplier_location": "availability_delay",
-        "availability_delay": "storage_location",
-        "storage_location": "sku_open",
-        "sku_open": "sku_frequency",
-        "sku_frequency": "dotation",
-        "dotation": {
-            "Oui": "dotation_yes",
-            "Non": "additional_requirements"
-        },
-        "dotation_yes": "additional_requirements",
-        "additional_requirements": "final"
-    }
-    next_question = mapping.get(previous_question)
+def get_next_question(answer, current_question):
+    next_question = NEXT_QUESTION_MAPPING.get(current_question)
     if isinstance(next_question, dict):
         return next_question.get(answer)
     return next_question
 
 # Function to save answers to an Excel file
-def save_answers_to_excel(recommendation, ai_recommendation):
-    user_name = user_answers.get("name")
-    if not user_name:
-        st.warning("Le nom de l'utilisateur est manquant.")
-        return
+def save_answers_to_excel(user_answers, recommendation, ai_recommendation):
+    user_name = user_answers.get("name", "Unknown_User")
     current_date = datetime.now().strftime("%d-%m-%Y")
     file_name = f"{user_name}_{current_date}.xlsx"
-    file_path = os.path.join(excel_directory, file_name)
+    file_path = os.path.join(EXCEL_DIRECTORY, file_name)
+
     try:
         workbook = openpyxl.Workbook()
         sheet = workbook.active
         sheet.title = "Réponses"
+
+        # Write questions and answers
         sheet.cell(row=1, column=1, value="Question")
         sheet.cell(row=1, column=2, value="Réponse")
         for idx, (question, answer) in enumerate(user_answers.items(), start=2):
             sheet.cell(row=idx, column=1, value=question)
             sheet.cell(row=idx, column=2, value=answer)
-        # Add recommendations
+
+        # Write recommendations
         sheet.cell(row=len(user_answers) + 2, column=1, value="Recommandations")
         sheet.cell(row=len(user_answers) + 2, column=2, value=recommendation)
         sheet.cell(row=len(user_answers) + 3, column=1, value="Recommandations IA")
         sheet.cell(row=len(user_answers) + 3, column=2, value=ai_recommendation)
+
         workbook.save(file_path)
         st.success(f"Les réponses ont été enregistrées dans {file_path}")
     except PermissionError:
         st.error(f"Impossible d'enregistrer le fichier. Vérifiez les permissions pour le chemin : {file_path}")
 
-# Function to display recommendations based on answers
-def show_recommendation():
-    recommendation = "Recommandations :\n"
-    product_code = user_answers.get("product_code")
-    if product_code == "Non":
-        recommendation += "- Assurez-vous de créer un nouveau code dans le système avant de passer commande.\n"
-    quantity_minimum = user_answers.get("supplier_conditions")
-    if quantity_minimum == "Oui":
-        recommendation += "- Recommandez une analyse de consommation historique pour ajuster les hypothèses de réapprovisionnement.\n"
-    supplier_location = user_answers.get("supplier_location")
-    if supplier_location == "Grand export":
-        recommendation += "- Prévoir un délai logistique plus long et anticiper les commandes.\n"
-    dotation = user_answers.get("dotation")
-    if dotation == "Oui":
-        recommendation += "- Priorisez la planification logistique avec le 3PL pour respecter les délais impératifs.\n"
+# Function to generate AI recommendations
+def get_ai_recommendation(answers):
+    try:
+        prompt = "Voici les réponses d'un utilisateur à un questionnaire :\n"
+        for question, answer in answers.items():
+            prompt += f"- {question}: {answer}\n"
+        prompt += "Basé sur ces réponses, fournissez des recommandations supplémentaires pertinentes (30 mots max) :"
+        response = co.generate(prompt=prompt, model="xlarge")
+        return response.generations[0].text.strip()
+    except Exception as e:
+        return f"Erreur lors de la génération des recommandations IA : {str(e)}"
 
-    def get_ai_recommendation(answers):
-        try:
-            prompt = "Voici les réponses d'un utilisateur à un questionnaire :\n"
-            for question, answer in answers.items():
-                prompt += f"- {question}: {answer}\n"
-            prompt += "Basé sur ces réponses, fournissez des recommandations supplémentaires pertinentes 30 mots max:"
-            response = co.generate(prompt=prompt, model="xlarge")
-            return response.generations[0].text.strip()
-        except Exception as e:
-            return f"Erreur lors de la génération des recommandations IA : {str(e)}"
+# Function to display recommendations
+def show_recommendation(user_answers):
+    recommendation = "Recommandations :\n"
+    if user_answers.get("product_code") == "Non":
+        recommendation += "- Assurez-vous de créer un nouveau code dans le système avant de passer commande.\n"
+    if user_answers.get("supplier_conditions") == "Oui":
+        recommendation += "- Analysez la consommation historique pour ajuster les hypothèses de réapprovisionnement.\n"
+    if user_answers.get("supplier_location") == "Grand export":
+        recommendation += "- Prévoir un délai logistique plus long et anticiper les commandes.\n"
+    if user_answers.get("dotation") == "Oui":
+        recommendation += "- Priorisez la planification logistique avec le 3PL pour respecter les délais impératifs.\n"
 
     ai_recommendation = get_ai_recommendation(user_answers)
     recommendation += f"\nRecommandations IA :\n{ai_recommendation}"
-    st.text_area("Recommandations", recommendation)
+
+    st.text_area("Recommandations", recommendation, height=200)
     if st.button("Enregistrer les réponses"):
-        save_answers_to_excel(recommendation, ai_recommendation)
+        save_answers_to_excel(user_answers, recommendation, ai_recommendation)
 
 # Main Streamlit application
 def main():
     st.title("Outil Marketing Survey")
     st.write("Merci de répondre aux questions pour obtenir des recommandations personnalisées.")
 
+    # Initialize session state
     if "current_question" not in st.session_state:
         st.session_state.current_question = "name"
+    if "user_answers" not in st.session_state:
+        st.session_state.user_answers = {}
 
+    # Get current question
     current_question_key = st.session_state.current_question
-    question_data = questions.get(current_question_key)
+    question_data = QUESTIONS.get(current_question_key)
 
     if question_data:
         st.subheader(question_data["question"])
@@ -224,12 +228,14 @@ def main():
 
         if st.button("Suivant"):
             if answer:
-                user_answers[current_question_key] = answer
+                # Save answer and move to the next question
+                st.session_state.user_answers[current_question_key] = answer
                 st.session_state.current_question = get_next_question(answer, current_question_key)
             else:
                 st.warning("Veuillez entrer une réponse.")
     else:
-        show_recommendation()
+        # Show recommendations at the end
+        show_recommendation(st.session_state.user_answers)
 
 if __name__ == "__main__":
     main()
