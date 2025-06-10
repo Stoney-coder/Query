@@ -11,9 +11,6 @@ co = cohere.Client(api_key="YOUR_API_KEY")  # Replace with your actual API key
 excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
 os.makedirs(excel_directory, exist_ok=True)
 
-# Dictionary to store user answers
-user_answers = {}
-
 # Dictionary of questions and conditional answers
 questions = {
     "name": {
@@ -145,7 +142,7 @@ def get_next_question(answer, previous_question):
 
 # Function to save answers to an Excel file
 def save_answers_to_excel(recommendation, ai_recommendation):
-    user_name = user_answers.get("name")
+    user_name = st.session_state.user_answers.get("name")
     if not user_name:
         st.warning("Le nom de l'utilisateur est manquant.")
         return
@@ -158,14 +155,14 @@ def save_answers_to_excel(recommendation, ai_recommendation):
         sheet.title = "Réponses"
         sheet.cell(row=1, column=1, value="Question")
         sheet.cell(row=1, column=2, value="Réponse")
-        for idx, (question, answer) in enumerate(user_answers.items(), start=2):
+        for idx, (question, answer) in enumerate(st.session_state.user_answers.items(), start=2):
             sheet.cell(row=idx, column=1, value=question)
             sheet.cell(row=idx, column=2, value=answer)
         # Add recommendations
-        sheet.cell(row=len(user_answers) + 2, column=1, value="Recommandations")
-        sheet.cell(row=len(user_answers) + 2, column=2, value=recommendation)
-        sheet.cell(row=len(user_answers) + 3, column=1, value="Recommandations IA")
-        sheet.cell(row=len(user_answers) + 3, column=2, value=ai_recommendation)
+        sheet.cell(row=len(st.session_state.user_answers) + 2, column=1, value="Recommandations")
+        sheet.cell(row=len(st.session_state.user_answers) + 2, column=2, value=recommendation)
+        sheet.cell(row=len(st.session_state.user_answers) + 3, column=1, value="Recommandations IA")
+        sheet.cell(row=len(st.session_state.user_answers) + 3, column=2, value=ai_recommendation)
         workbook.save(file_path)
         st.success(f"Les réponses ont été enregistrées dans {file_path}")
     except PermissionError:
@@ -174,16 +171,16 @@ def save_answers_to_excel(recommendation, ai_recommendation):
 # Function to display recommendations based on answers
 def show_recommendation():
     recommendation = "Recommandations :\n"
-    product_code = user_answers.get("product_code")
+    product_code = st.session_state.user_answers.get("product_code")
     if product_code == "Non":
         recommendation += "- Assurez-vous de créer un nouveau code dans le système avant de passer commande.\n"
-    quantity_minimum = user_answers.get("supplier_conditions")
+    quantity_minimum = st.session_state.user_answers.get("supplier_conditions")
     if quantity_minimum == "Oui":
         recommendation += "- Recommandez une analyse de consommation historique pour ajuster les hypothèses de réapprovisionnement.\n"
-    supplier_location = user_answers.get("supplier_location")
+    supplier_location = st.session_state.user_answers.get("supplier_location")
     if supplier_location == "Grand export":
         recommendation += "- Prévoir un délai logistique plus long et anticiper les commandes.\n"
-    dotation = user_answers.get("dotation")
+    dotation = st.session_state.user_answers.get("dotation")
     if dotation == "Oui":
         recommendation += "- Priorisez la planification logistique avec le 3PL pour respecter les délais impératifs.\n"
 
@@ -198,7 +195,7 @@ def show_recommendation():
         except Exception as e:
             return f"Erreur lors de la génération des recommandations IA : {str(e)}"
 
-    ai_recommendation = get_ai_recommendation(user_answers)
+    ai_recommendation = get_ai_recommendation(st.session_state.user_answers)
     recommendation += f"\nRecommandations IA :\n{ai_recommendation}"
     st.text_area("Recommandations", recommendation)
     if st.button("Enregistrer les réponses"):
@@ -209,8 +206,11 @@ def main():
     st.title("Outil Marketing Survey")
     st.write("Merci de répondre aux questions pour obtenir des recommandations personnalisées.")
 
+    # Initialize session state variables
     if "current_question" not in st.session_state:
         st.session_state.current_question = "name"
+    if "user_answers" not in st.session_state:
+        st.session_state.user_answers = {}
 
     current_question_key = st.session_state.current_question
     question_data = questions.get(current_question_key)
@@ -224,7 +224,7 @@ def main():
 
         if st.button("Suivant"):
             if answer:
-                user_answers[current_question_key] = answer
+                st.session_state.user_answers[current_question_key] = answer
                 st.session_state.current_question = get_next_question(answer, current_question_key)
             else:
                 st.warning("Veuillez entrer une réponse.")
