@@ -9,6 +9,12 @@ import os
 from datetime import datetime
 import cohere
 
+# Check if openpyxl is installed
+try:
+    import openpyxl
+except ImportError:
+    st.error("The 'openpyxl' library is not installed. Please install it using 'pip install openpyxl'.")
+
 # Initialize Cohere Client
 co = cohere.Client(api_key="CADyn7RJ5sXnikvmipLYLSyWhoUvJS56FksKuAEQ")  # Replace with your actual API key
 
