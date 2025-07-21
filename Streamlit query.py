@@ -4,44 +4,51 @@ import os
 from datetime import datetime
 import cohere
 
-# Inject custom CSS for branding
+# Inject custom CSS for branding and white text
 st.markdown("""
     <style>
-        body {
+        body, .stApp {
             background-color: #08312A !important;
-        }
-        .stApp {
-            background-color: #08312A !important;
+            color: #FFFFFF !important;
         }
         .stButton>button {
-            color: #08312A !important;
+            color: #FFFFFF !important;
             background: #00E47C !important;
             border: none !important;
             border-radius: 8px !important;
         }
         .stTextInput>div>div>input, .stTextArea>div>textarea {
             background-color: #08312A !important;
-            color: #00E47C !important;
+            color: #FFFFFF !important;
             border: 1px solid #00E47C !important;
         }
-        .stRadio>div>label {
-            color: #00E47C !important;
+        .stRadio>div>label, .stCheckbox>div>label {
+            color: #FFFFFF !important;
         }
         .st-bd, .st-c3, .st-dh, .st-be, .st-cg {
             background-color: #08312A !important;
         }
-        h1, h2, h3, h4, h5, h6, .stMarkdown, .stSubheader {
-            color: #00E47C !important;
+        h1, h2, h3, h4, h5, h6, .stMarkdown, .stSubheader, .stText, .stAlert {
+            color: #FFFFFF !important;
         }
         .stAlert {
             background-color: #00E47C !important;
             color: #08312A !important;
         }
+        .stTextArea textarea {
+            color: #FFFFFF !important;
+            background-color: #08312A !important;
+        }
+        /* Selection highlight */
+        ::selection {
+            background: #00E47C;
+            color: #08312A;
+        }
     </style>
 """, unsafe_allow_html=True)
 
 # Initialize Cohere Client
-co = cohere.Client(api_key="CADyn7RJ5sXnikvmipLYLSyWhoUvJS56FksKuAEQ")  # Replace with your actual API key
+co = cohere.Client(api_key="YOUR_API_KEY")  # Replace with your actual API key
 
 # Directory to save Excel files
 excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
