@@ -5,7 +5,7 @@ from datetime import datetime
 import cohere
 
 # Initialize Cohere Client
-co = cohere.Client(api_key="YOUR_API_KEY")  # Replace with your actual API key
+co = cohere.Client(api_key="CADyn7RJ5sXnikvmipLYLSyWhoUvJS56FksKuAEQ")
 
 # Directory to save Excel files
 excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
