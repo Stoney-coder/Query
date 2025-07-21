@@ -267,7 +267,6 @@ def main():
 
     if question_data:
         st.subheader(question_data["question"])
-        # Use a unique widget key for each question
         widget_key = f"widget_{current_question_key}"
 
         with st.form(key=f"form_{current_question_key}"):
@@ -284,7 +283,7 @@ def main():
                         st.session_state.current_question = next_question
                     else:
                         st.session_state.current_question = "final"
-                    st.experimental_rerun()
+                    # NO st.experimental_rerun() here!
                 else:
                     st.warning("Veuillez entrer une réponse.")
     else:
