@@ -23,7 +23,6 @@ st.markdown("""
             color: #08312A !important;
             border: 1px solid #00E47C !important;
         }
-        /* Label and radio/checkbox/select labels */
         label,
         .css-1c7y2kd,
         .stRadio label,
@@ -34,7 +33,6 @@ st.markdown("""
         [data-testid="stTextAreaLabel"] {
             color: #08312A !important;
         }
-        /* Headings and subheaders */
         h1, h2, h3, h4, h5, h6,
         .stMarkdown, .stSubheader, .stText, .stAlert {
             color: #08312A !important;
@@ -47,12 +45,10 @@ st.markdown("""
             background: #00E47C;
             color: #FFFFFF;
         }
-        /* Streamlit text area text color */
         .stTextArea textarea {
             color: #08312A !important;
             background-color: #FFFFFF !important;
         }
-        /* Force all option spans in radio/select/checkbox to dark green */
         .stRadio span, .stCheckbox span, .stSelectbox span,
         [data-testid="stRadioItem"] > div > div > span,
         [data-testid="stSelectboxOption"] > div > span,
@@ -160,7 +156,6 @@ questions = {
     }
 }
 
-# --- Next question logic ---
 def get_next_question(answer, previous_question):
     mapping = {
         "name": "email",
@@ -201,7 +196,6 @@ def get_next_question(answer, previous_question):
         return next_question.get(answer)
     return next_question
 
-# --- Save to Excel ---
 def save_answers_to_excel(recommendation, ai_recommendation):
     user_name = st.session_state.user_answers.get("name")
     if not user_name:
@@ -219,7 +213,6 @@ def save_answers_to_excel(recommendation, ai_recommendation):
         for idx, (question, answer) in enumerate(st.session_state.user_answers.items(), start=2):
             sheet.cell(row=idx, column=1, value=question)
             sheet.cell(row=idx, column=2, value=answer)
-        # Add recommendations
         sheet.cell(row=len(st.session_state.user_answers) + 2, column=1, value="Recommandations")
         sheet.cell(row=len(st.session_state.user_answers) + 2, column=2, value=recommendation)
         sheet.cell(row=len(st.session_state.user_answers) + 3, column=1, value="Recommandations IA")
@@ -229,7 +222,6 @@ def save_answers_to_excel(recommendation, ai_recommendation):
     except PermissionError:
         st.error(f"Impossible d'enregistrer le fichier. Vérifiez les permissions pour le chemin : {file_path}")
 
-# --- Recommendations display ---
 def show_recommendation():
     recommendation = "Recommandations :\n"
     product_code = st.session_state.user_answers.get("product_code")
@@ -262,16 +254,16 @@ def show_recommendation():
     if st.button("Enregistrer les réponses"):
         save_answers_to_excel(recommendation, ai_recommendation)
 
-# --- Main Streamlit App ---
 def main():
     st.title("Outil Marketing Survey")
     st.write("Merci de répondre aux questions pour obtenir des recommandations personnalisées.")
 
-    # Session state setup
     if "current_question" not in st.session_state:
         st.session_state.current_question = "name"
     if "user_answers" not in st.session_state:
         st.session_state.user_answers = {}
+    if "temp_answer" not in st.session_state:
+        st.session_state.temp_answer = ""
 
     current_question_key = st.session_state.current_question
     question_data = questions.get(current_question_key)
@@ -279,11 +271,21 @@ def main():
     if question_data:
         st.subheader(question_data["question"])
         if question_data["options"]:
-            answer = st.radio("Choisissez une option :", question_data["options"], key=current_question_key)
+            st.session_state.temp_answer = st.radio(
+                "Choisissez une option :",
+                question_data["options"],
+                key="radio_" + current_question_key,
+                index=question_data["options"].index(st.session_state.temp_answer) if st.session_state.temp_answer in question_data["options"] else 0
+            )
         else:
-            answer = st.text_input("Votre réponse :", key=current_question_key)
+            st.session_state.temp_answer = st.text_input(
+                "Votre réponse :",
+                value=st.session_state.temp_answer,
+                key="input_" + current_question_key
+            )
 
         if st.button("Suivant"):
+            answer = st.session_state.temp_answer
             if answer:
                 st.session_state.user_answers[current_question_key] = answer
                 next_question = get_next_question(answer, current_question_key)
@@ -291,6 +293,8 @@ def main():
                     st.session_state.current_question = next_question
                 else:
                     st.session_state.current_question = "final"
+                st.session_state.temp_answer = ""  # Clear temp answer for next question
+                st.experimental_rerun()
             else:
                 st.warning("Veuillez entrer une réponse.")
     else:
