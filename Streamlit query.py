@@ -4,57 +4,65 @@ import os
 from datetime import datetime
 import cohere
 
-# Inject custom CSS for branding and white text
+# --- Custom CSS for branding and white font ---
 st.markdown("""
     <style>
         body, .stApp {
             background-color: #08312A !important;
             color: #FFFFFF !important;
         }
-        .stButton>button {
+        .stButton > button {
             color: #FFFFFF !important;
             background: #00E47C !important;
             border: none !important;
             border-radius: 8px !important;
         }
-        .stTextInput>div>div>input, .stTextArea>div>textarea {
+        .stTextInput > div > div > input,
+        .stTextArea > div > textarea {
             background-color: #08312A !important;
             color: #FFFFFF !important;
             border: 1px solid #00E47C !important;
         }
-        .stRadio>div>label, .stCheckbox>div>label {
+        /* Label and radio/checkbox/select labels */
+        label,
+        .css-1c7y2kd,
+        .stRadio label,
+        .stCheckbox label,
+        [data-testid="stRadioLabel"],
+        [data-testid="stSelectboxLabel"],
+        [data-testid="stTextInputLabel"],
+        [data-testid="stTextAreaLabel"] {
             color: #FFFFFF !important;
         }
-        .st-bd, .st-c3, .st-dh, .st-be, .st-cg {
-            background-color: #08312A !important;
-        }
-        h1, h2, h3, h4, h5, h6, .stMarkdown, .stSubheader, .stText, .stAlert {
+        /* Headings and subheaders */
+        h1, h2, h3, h4, h5, h6,
+        .stMarkdown, .stSubheader, .stText, .stAlert {
             color: #FFFFFF !important;
         }
         .stAlert {
             background-color: #00E47C !important;
             color: #08312A !important;
         }
-        .stTextArea textarea {
-            color: #FFFFFF !important;
-            background-color: #08312A !important;
-        }
-        /* Selection highlight */
         ::selection {
             background: #00E47C;
             color: #08312A;
         }
+        /* Streamlit text area text color */
+        .stTextArea textarea {
+            color: #FFFFFF !important;
+            background-color: #08312A !important;
+        }
     </style>
 """, unsafe_allow_html=True)
 
-# Initialize Cohere Client
+# --- Cohere Client ---
 co = cohere.Client(api_key="YOUR_API_KEY")  # Replace with your actual API key
 
-# Directory to save Excel files
+# --- Directory for Excel export ---
 excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
 os.makedirs(excel_directory, exist_ok=True)
 
-# Dictionary of questions and conditional answers
+# --- Questionnaire structure ---
 questions = {
     "name": {
         "question": "1.1. Quel est votre nom et prénom ? 😊",
@@ -142,7 +150,7 @@ questions = {
     }
 }
 
-# Function to determine the next question
+# --- Next question logic ---
 def get_next_question(answer, previous_question):
     mapping = {
         "name": "email",
@@ -183,7 +191,7 @@ def get_next_question(answer, previous_question):
         return next_question.get(answer)
     return next_question
 
-# Function to save answers to an Excel file
+# --- Save to Excel ---
 def save_answers_to_excel(recommendation, ai_recommendation):
     user_name = st.session_state.user_answers.get("name")
     if not user_name:
@@ -211,7 +219,7 @@ def save_answers_to_excel(recommendation, ai_recommendation):
     except PermissionError:
         st.error(f"Impossible d'enregistrer le fichier. Vérifiez les permissions pour le chemin : {file_path}")
 
-# Function to display recommendations based on answers
+# --- Recommendations display ---
 def show_recommendation():
     recommendation = "Recommandations :\n"
     product_code = st.session_state.user_answers.get("product_code")
@@ -244,12 +252,12 @@ def show_recommendation():
     if st.button("Enregistrer les réponses"):
         save_answers_to_excel(recommendation, ai_recommendation)
 
-# Main Streamlit application
+# --- Main Streamlit App ---
 def main():
     st.title("Outil Marketing Survey")
     st.write("Merci de répondre aux questions pour obtenir des recommandations personnalisées.")
 
-    # Initialize session state variables
+    # Session state setup
     if "current_question" not in st.session_state:
         st.session_state.current_question = "name"
     if "user_answers" not in st.session_state:
