@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 import cohere
 
-# --- Custom CSS for white background and dark green font ---
+# --- Custom CSS ---
 st.markdown("""
     <style>
         body, .stApp {
@@ -16,12 +16,6 @@ st.markdown("""
             background: #00E47C !important;
             border: none !important;
             border-radius: 8px !important;
-        }
-        .stTextInput > div > div > input,
-        .stTextArea > div > textarea {
-            background-color: #FFFFFF !important;
-            color: #08312A !important;
-            border: 1px solid #00E47C !important;
         }
         label,
         .css-1c7y2kd,
@@ -61,42 +55,25 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Cohere Client ---
 co = cohere.Client(api_key="YOUR_API_KEY")  # Replace with your actual API key
 
-# --- Directory for Excel export ---
 excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
 os.makedirs(excel_directory, exist_ok=True)
 
 questions = {
-    "name": {
-        "question": "1.1. Quel est votre nom et prénom ? 😊",
-        "options": []
-    },
-    "email": {
-        "question": "1.2. Quelle est votre adresse e-mail ? 📧",
-        "options": []
-    },
+    "name": {"question": "1.1. Quel est votre nom et prénom ? 😊", "options": []},
+    "email": {"question": "1.2. Quelle est votre adresse e-mail ? 📧", "options": []},
     "business_unit": {
         "question": "1.3. Quelle est votre Business Unit ? 🏢",
         "options": ["Pet Vet", "Avian", "Ruminant", "Swine", "Equine", "Pet Retail"]
     },
-    "supplier_name": {
-        "question": "2.1. Quel est le nom du fournisseur ? 🏭",
-        "options": []
-    },
+    "supplier_name": {"question": "2.1. Quel est le nom du fournisseur ? 🏭", "options": []},
     "product_code": {
         "question": "2.2. Le produit a-t-il déjà un code existant ? 🔢",
         "options": ["Oui", "Non"]
     },
-    "product_code_yes": {
-        "question": "Veuillez indiquer le SKU actuel : 🆔",
-        "options": []
-    },
-    "product_code_no": {
-        "question": "Veuillez indiquer le SKU précédent ou similaire : 🆔",
-        "options": []
-    },
+    "product_code_yes": {"question": "Veuillez indiquer le SKU actuel : 🆔", "options": []},
+    "product_code_no": {"question": "Veuillez indiquer le SKU précédent ou similaire : 🆔", "options": []},
     "product_description": {
         "question": "2.3. Fournissez une brève description du produit : 📝 ou description rattachée en automatique?",
         "options": []
@@ -149,10 +126,7 @@ questions = {
         "question": "7.1. Y a-t-il des exigences supplémentaires ? ❓",
         "options": []
     },
-    "final": {
-        "question": "Fin du formulaire 🏁",
-        "options": []
-    }
+    "final": {"question": "Fin du formulaire 🏁", "options": []}
 }
 
 def get_next_question(answer, previous_question):
@@ -161,32 +135,20 @@ def get_next_question(answer, previous_question):
         "email": "business_unit",
         "business_unit": "supplier_name",
         "supplier_name": "product_code",
-        "product_code": {
-            "Oui": "product_code_yes",
-            "Non": "product_code_no"
-        },
+        "product_code": {"Oui": "product_code_yes", "Non": "product_code_no"},
         "product_code_yes": "product_description",
         "product_code_no": "product_description",
         "product_description": "supplier_conditions",
-        "supplier_conditions": {
-            "Oui": "quantity_minimum_yes",
-            "Non": "coverage_duration"
-        },
+        "supplier_conditions": {"Oui": "quantity_minimum_yes", "Non": "coverage_duration"},
         "quantity_minimum_yes": "coverage_duration",
-        "coverage_duration": {
-            "Oui": "coverage_duration_yes",
-            "Non": "supplier_location"
-        },
+        "coverage_duration": {"Oui": "coverage_duration_yes", "Non": "supplier_location"},
         "coverage_duration_yes": "supplier_location",
         "supplier_location": "availability_delay",
         "availability_delay": "storage_location",
         "storage_location": "sku_open",
         "sku_open": "sku_frequency",
         "sku_frequency": "dotation",
-        "dotation": {
-            "Oui": "dotation_yes",
-            "Non": "additional_requirements"
-        },
+        "dotation": {"Oui": "dotation_yes", "Non": "additional_requirements"},
         "dotation_yes": "additional_requirements",
         "additional_requirements": "final"
     }
@@ -261,8 +223,8 @@ def main():
         st.session_state.current_question = "name"
     if "user_answers" not in st.session_state:
         st.session_state.user_answers = {}
-    if "saved_answer" not in st.session_state:
-        st.session_state.saved_answer = False
+    if "answer_saved" not in st.session_state:
+        st.session_state.answer_saved = False
     if "last_question_key" not in st.session_state:
         st.session_state.last_question_key = ""
 
@@ -270,50 +232,44 @@ def main():
     question_data = questions.get(current_question_key)
     widget_key = f"widget_{current_question_key}"
 
-    # If the question key changed, reset the saved_answer flag
+    # If we switched to a new question, reset the saved flag and clear the input box
     if st.session_state.last_question_key != current_question_key:
-        st.session_state.saved_answer = False
-        # Also clear widget value for text_input (ensures fresh answer)
+        st.session_state.answer_saved = False
         if widget_key in st.session_state:
             del st.session_state[widget_key]
         st.session_state.last_question_key = current_question_key
 
     if question_data:
         st.subheader(question_data["question"])
+        with st.form(key=f"form_{current_question_key}"):
+            if question_data["options"]:
+                answer = st.radio("Choisissez une option :", question_data["options"], key=widget_key)
+            else:
+                answer = st.text_input("Votre réponse :", key=widget_key)
 
-        if question_data["options"]:
-            answer = st.radio("Choisissez une option :", question_data["options"], key=widget_key)
-        else:
-            answer = st.text_input("Votre réponse :", key=widget_key)
+            save = st.form_submit_button("Enregistrer")
+            nextq = st.form_submit_button("Suivant", disabled=not st.session_state.answer_saved)
 
-        col1, col2 = st.columns(2)
-
-        with col1:
-            if st.button("Enregistrer"):
+            if save:
                 if answer:
                     st.session_state.user_answers[current_question_key] = answer
-                    st.session_state.saved_answer = True
+                    st.session_state.answer_saved = True
                     st.success("Réponse enregistrée. Cliquez sur 'Suivant' pour continuer.")
                 else:
-                    st.session_state.saved_answer = False
                     st.warning("Veuillez entrer une réponse avant d'enregistrer.")
+            if nextq and st.session_state.answer_saved:
+                next_question = get_next_question(answer, current_question_key)
+                st.session_state.answer_saved = False
+                if widget_key in st.session_state:
+                    del st.session_state[widget_key]
+                if next_question:
+                    st.session_state.current_question = next_question
+                else:
+                    st.session_state.current_question = "final"
+                st.experimental_rerun()  # ensures UI updates instantly to next question
 
-        with col2:
-            suivant_disabled = not st.session_state.saved_answer
-            if suivant_disabled:
-                st.button("Suivant", disabled=True)
+            if not st.session_state.answer_saved:
                 st.info("Vous devez cliquer sur 'Enregistrer' avant de continuer.")
-            else:
-                if st.button("Suivant"):
-                    # Move to next question, reset saved state and answer input
-                    next_question = get_next_question(answer, current_question_key)
-                    st.session_state.saved_answer = False
-                    if widget_key in st.session_state:
-                        del st.session_state[widget_key]
-                    if next_question:
-                        st.session_state.current_question = next_question
-                    else:
-                        st.session_state.current_question = "final"
 
     else:
         show_recommendation()
