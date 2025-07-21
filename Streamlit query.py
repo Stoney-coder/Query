@@ -61,7 +61,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-co = cohere.Client(api_key="YOUR_API_KEY")  # Replace with your actual API key
+co = cohere.Client(api_key="YOUR_API_KEY")  # <-- ADD YOUR API KEY HERE
 
 excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
 os.makedirs(excel_directory, exist_ok=True)
@@ -241,20 +241,20 @@ def main():
                 answer = st.radio("Choisissez une option :", question_data["options"], key=widget_key)
             else:
                 answer = st.text_input("Votre réponse :", key=widget_key)
-            submitted = st.form_submit_button("Enregistrer et continuer")
+            submitted = st.form_submit_button("Suivant")
             if submitted:
                 if answer:
                     st.session_state.user_answers[current_question_key] = answer
                     next_question = get_next_question(answer, current_question_key)
                     if next_question:
                         st.session_state.current_question = next_question
-                        # clear next widget state to avoid carrying over previous answer
+                        # Clear next widget state to avoid answer carryover
                         next_widget_key = f"widget_{next_question}"
                         if next_widget_key in st.session_state:
                             del st.session_state[next_widget_key]
                     else:
                         st.session_state.current_question = "final"
-                    st.experimental_rerun()  # go to next question instantly
+                    st.experimental_rerun()
                 else:
                     st.warning("Veuillez entrer une réponse avant de continuer.")
     else:
