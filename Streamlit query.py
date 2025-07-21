@@ -61,14 +61,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Cohere Client ---
 co = cohere.Client(api_key="YOUR_API_KEY")  # Replace with your actual API key
 
-# --- Directory for Excel export ---
 excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
 os.makedirs(excel_directory, exist_ok=True)
 
-# --- Questionnaire structure ---
 questions = {
     "name": {
         "question": "1.1. Quel est votre nom et prénom ? 😊",
@@ -270,31 +267,31 @@ def main():
 
     if question_data:
         st.subheader(question_data["question"])
+        answer = ""
         if question_data["options"]:
-            st.session_state.temp_answer = st.radio(
+            answer = st.radio(
                 "Choisissez une option :",
                 question_data["options"],
-                key="radio_" + current_question_key,
-                index=question_data["options"].index(st.session_state.temp_answer) if st.session_state.temp_answer in question_data["options"] else 0
+                key="radio_static"
             )
         else:
-            st.session_state.temp_answer = st.text_input(
+            answer = st.text_input(
                 "Votre réponse :",
-                value=st.session_state.temp_answer,
-                key="input_" + current_question_key
+                key="input_static"
             )
-
         if st.button("Suivant"):
-            answer = st.session_state.temp_answer
-            if answer:
-                st.session_state.user_answers[current_question_key] = answer
-                next_question = get_next_question(answer, current_question_key)
+            # Use answer from widget, not temp_answer/session state
+            value = answer if answer else ""
+            if value:
+                st.session_state.user_answers[current_question_key] = value
+                next_question = get_next_question(value, current_question_key)
                 if next_question:
                     st.session_state.current_question = next_question
                 else:
                     st.session_state.current_question = "final"
-                st.session_state.temp_answer = ""  # Clear temp answer for next question
-                st.experimental_rerun()
+                # Clear widgets by resetting their static keys
+                st.session_state["radio_static"] = ""
+                st.session_state["input_static"] = ""
             else:
                 st.warning("Veuillez entrer une réponse.")
     else:
