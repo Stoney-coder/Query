@@ -61,8 +61,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- Cohere Client ---
 co = cohere.Client(api_key="YOUR_API_KEY")  # Replace with your actual API key
 
+# --- Directory for Excel export ---
 excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
 os.makedirs(excel_directory, exist_ok=True)
 
@@ -265,33 +267,26 @@ def main():
 
     if question_data:
         st.subheader(question_data["question"])
-
-        answer = None
+        # Use a unique widget key for each question
         widget_key = f"widget_{current_question_key}"
-        if question_data["options"]:
-            answer = st.radio(
-                "Choisissez une option :",
-                question_data["options"],
-                key=widget_key
-            )
-        else:
-            answer = st.text_input(
-                "Votre réponse :",
-                key=widget_key
-            )
 
-        if st.button("Suivant"):
-            if answer:
-                st.session_state.user_answers[current_question_key] = answer
-                next_question = get_next_question(answer, current_question_key)
-                if next_question:
-                    st.session_state.current_question = next_question
-                else:
-                    st.session_state.current_question = "final"
-                # Do not manually reset st.session_state here!
-                st.experimental_rerun()
+        with st.form(key=f"form_{current_question_key}"):
+            if question_data["options"]:
+                answer = st.radio("Choisissez une option :", question_data["options"], key=widget_key)
             else:
-                st.warning("Veuillez entrer une réponse.")
+                answer = st.text_input("Votre réponse :", key=widget_key)
+            submitted = st.form_submit_button("Suivant")
+            if submitted:
+                if answer:
+                    st.session_state.user_answers[current_question_key] = answer
+                    next_question = get_next_question(answer, current_question_key)
+                    if next_question:
+                        st.session_state.current_question = next_question
+                    else:
+                        st.session_state.current_question = "final"
+                    st.experimental_rerun()
+                else:
+                    st.warning("Veuillez entrer une réponse.")
     else:
         show_recommendation()
 
