@@ -61,8 +61,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-co = cohere.Client(api_key="YOUR_API_KEY")  # <-- ADD YOUR API KEY HERE
+# --- Cohere Client ---
+co = cohere.Client(api_key="YOUR_API_KEY")  # Replace with your API key!
 
+# --- Directory for Excel export ---
 excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
 os.makedirs(excel_directory, exist_ok=True)
 
@@ -225,6 +227,7 @@ def main():
     st.title("Outil Marketing Survey")
     st.write("Merci de répondre aux questions pour obtenir des recommandations personnalisées.")
 
+    # Init session state
     if "current_question" not in st.session_state:
         st.session_state.current_question = "name"
     if "user_answers" not in st.session_state:
@@ -248,15 +251,18 @@ def main():
                     next_question = get_next_question(answer, current_question_key)
                     if next_question:
                         st.session_state.current_question = next_question
-                        # Clear next widget state to avoid answer carryover
+                        # Clear widget state for next question to avoid carryover
                         next_widget_key = f"widget_{next_question}"
                         if next_widget_key in st.session_state:
                             del st.session_state[next_widget_key]
                     else:
                         st.session_state.current_question = "final"
-                    st.experimental_rerun()
+                    # DO NOT CALL st.experimental_rerun() HERE!
                 else:
                     st.warning("Veuillez entrer une réponse avant de continuer.")
+        # Show info if user hasn't answered yet
+        if widget_key not in st.session_state or not st.session_state[widget_key]:
+            st.info("Veuillez répondre avant de cliquer sur Suivant.")
     else:
         show_recommendation()
 
