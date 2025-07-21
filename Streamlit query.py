@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 import cohere
 
-# --- Custom CSS ---
+# --- Custom CSS for white background and dark green font ---
 st.markdown("""
     <style>
         body, .stApp {
@@ -16,6 +16,12 @@ st.markdown("""
             background: #00E47C !important;
             border: none !important;
             border-radius: 8px !important;
+        }
+        .stTextInput > div > div > input,
+        .stTextArea > div > textarea {
+            background-color: #FFFFFF !important;
+            color: #08312A !important;
+            border: 1px solid #00E47C !important;
         }
         label,
         .css-1c7y2kd,
@@ -223,21 +229,10 @@ def main():
         st.session_state.current_question = "name"
     if "user_answers" not in st.session_state:
         st.session_state.user_answers = {}
-    if "answer_saved" not in st.session_state:
-        st.session_state.answer_saved = False
-    if "last_question_key" not in st.session_state:
-        st.session_state.last_question_key = ""
 
     current_question_key = st.session_state.current_question
     question_data = questions.get(current_question_key)
     widget_key = f"widget_{current_question_key}"
-
-    # If we switched to a new question, reset the saved flag and clear the input box
-    if st.session_state.last_question_key != current_question_key:
-        st.session_state.answer_saved = False
-        if widget_key in st.session_state:
-            del st.session_state[widget_key]
-        st.session_state.last_question_key = current_question_key
 
     if question_data:
         st.subheader(question_data["question"])
@@ -246,31 +241,22 @@ def main():
                 answer = st.radio("Choisissez une option :", question_data["options"], key=widget_key)
             else:
                 answer = st.text_input("Votre réponse :", key=widget_key)
-
-            save = st.form_submit_button("Enregistrer")
-            nextq = st.form_submit_button("Suivant", disabled=not st.session_state.answer_saved)
-
-            if save:
+            submitted = st.form_submit_button("Enregistrer et continuer")
+            if submitted:
                 if answer:
                     st.session_state.user_answers[current_question_key] = answer
-                    st.session_state.answer_saved = True
-                    st.success("Réponse enregistrée. Cliquez sur 'Suivant' pour continuer.")
+                    next_question = get_next_question(answer, current_question_key)
+                    if next_question:
+                        st.session_state.current_question = next_question
+                        # clear next widget state to avoid carrying over previous answer
+                        next_widget_key = f"widget_{next_question}"
+                        if next_widget_key in st.session_state:
+                            del st.session_state[next_widget_key]
+                    else:
+                        st.session_state.current_question = "final"
+                    st.experimental_rerun()  # go to next question instantly
                 else:
-                    st.warning("Veuillez entrer une réponse avant d'enregistrer.")
-            if nextq and st.session_state.answer_saved:
-                next_question = get_next_question(answer, current_question_key)
-                st.session_state.answer_saved = False
-                if widget_key in st.session_state:
-                    del st.session_state[widget_key]
-                if next_question:
-                    st.session_state.current_question = next_question
-                else:
-                    st.session_state.current_question = "final"
-                st.experimental_rerun()  # ensures UI updates instantly to next question
-
-            if not st.session_state.answer_saved:
-                st.info("Vous devez cliquer sur 'Enregistrer' avant de continuer.")
-
+                    st.warning("Veuillez entrer une réponse avant de continuer.")
     else:
         show_recommendation()
 
