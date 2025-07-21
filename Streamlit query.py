@@ -58,13 +58,6 @@ st.markdown("""
         [data-testid="stRadioItem"] *, [data-testid="stSelectboxOption"] * {
             color: #08312A !important;
         }
-        .disabled-btn {
-            opacity: 0.5 !important;
-            pointer-events: none !important;
-            background: #ddd !important;
-            color: #999 !important;
-            border: 1px solid #ccc !important;
-        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -270,47 +263,57 @@ def main():
         st.session_state.user_answers = {}
     if "saved_answer" not in st.session_state:
         st.session_state.saved_answer = False
+    if "last_question_key" not in st.session_state:
+        st.session_state.last_question_key = ""
 
     current_question_key = st.session_state.current_question
     question_data = questions.get(current_question_key)
+    widget_key = f"widget_{current_question_key}"
+
+    # If the question key changed, reset the saved_answer flag
+    if st.session_state.last_question_key != current_question_key:
+        st.session_state.saved_answer = False
+        # Also clear widget value for text_input (ensures fresh answer)
+        if widget_key in st.session_state:
+            del st.session_state[widget_key]
+        st.session_state.last_question_key = current_question_key
 
     if question_data:
         st.subheader(question_data["question"])
-        widget_key = f"widget_{current_question_key}"
 
         if question_data["options"]:
             answer = st.radio("Choisissez une option :", question_data["options"], key=widget_key)
         else:
             answer = st.text_input("Votre réponse :", key=widget_key)
 
-        # "Enregistrer" button
-        if st.button("Enregistrer"):
-            if answer:
-                st.session_state.user_answers[current_question_key] = answer
-                st.session_state.saved_answer = True
-                st.success("Réponse enregistrée. Vous pouvez cliquer sur 'Suivant'.")
-            else:
-                st.session_state.saved_answer = False
-                st.warning("Veuillez entrer une réponse avant d'enregistrer.")
+        col1, col2 = st.columns(2)
 
-        # "Suivant" button (enabled only if answer has been saved)
-        if not st.session_state.saved_answer:
-            st.markdown(
-                "<span style='color:#FF0000; font-weight:bold;'>Vous devez cliquer sur 'Enregistrer' avant de continuer.</span>",
-                unsafe_allow_html=True,
-            )
-            st.button("Suivant", disabled=True)
-        else:
-            if st.button("Suivant"):
-                # Move to next question, reset saved state
-                next_question = get_next_question(answer, current_question_key)
-                st.session_state.saved_answer = False
-                if next_question:
-                    st.session_state.current_question = next_question
+        with col1:
+            if st.button("Enregistrer"):
+                if answer:
+                    st.session_state.user_answers[current_question_key] = answer
+                    st.session_state.saved_answer = True
+                    st.success("Réponse enregistrée. Cliquez sur 'Suivant' pour continuer.")
                 else:
-                    st.session_state.current_question = "final"
-                # Reset answer widget for next question
-                st.session_state.pop(widget_key, None)
+                    st.session_state.saved_answer = False
+                    st.warning("Veuillez entrer une réponse avant d'enregistrer.")
+
+        with col2:
+            suivant_disabled = not st.session_state.saved_answer
+            if suivant_disabled:
+                st.button("Suivant", disabled=True)
+                st.info("Vous devez cliquer sur 'Enregistrer' avant de continuer.")
+            else:
+                if st.button("Suivant"):
+                    # Move to next question, reset saved state and answer input
+                    next_question = get_next_question(answer, current_question_key)
+                    st.session_state.saved_answer = False
+                    if widget_key in st.session_state:
+                        del st.session_state[widget_key]
+                    if next_question:
+                        st.session_state.current_question = next_question
+                    else:
+                        st.session_state.current_question = "final"
 
     else:
         show_recommendation()
