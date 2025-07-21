@@ -259,39 +259,37 @@ def main():
         st.session_state.current_question = "name"
     if "user_answers" not in st.session_state:
         st.session_state.user_answers = {}
-    if "temp_answer" not in st.session_state:
-        st.session_state.temp_answer = ""
 
     current_question_key = st.session_state.current_question
     question_data = questions.get(current_question_key)
 
     if question_data:
         st.subheader(question_data["question"])
-        answer = ""
+
+        answer = None
+        widget_key = f"widget_{current_question_key}"
         if question_data["options"]:
             answer = st.radio(
                 "Choisissez une option :",
                 question_data["options"],
-                key="radio_static"
+                key=widget_key
             )
         else:
             answer = st.text_input(
                 "Votre réponse :",
-                key="input_static"
+                key=widget_key
             )
+
         if st.button("Suivant"):
-            # Use answer from widget, not temp_answer/session state
-            value = answer if answer else ""
-            if value:
-                st.session_state.user_answers[current_question_key] = value
-                next_question = get_next_question(value, current_question_key)
+            if answer:
+                st.session_state.user_answers[current_question_key] = answer
+                next_question = get_next_question(answer, current_question_key)
                 if next_question:
                     st.session_state.current_question = next_question
                 else:
                     st.session_state.current_question = "final"
-                # Clear widgets by resetting their static keys
-                st.session_state["radio_static"] = ""
-                st.session_state["input_static"] = ""
+                # Do not manually reset st.session_state here!
+                st.experimental_rerun()
             else:
                 st.warning("Veuillez entrer une réponse.")
     else:
