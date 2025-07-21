@@ -5,7 +5,7 @@ from datetime import datetime
 import cohere
 
 # Initialize Cohere Client
-co = cohere.Client(api_key="YOUR_API_KEY")  # Replace with your actual API key
+co = cohere.Client(api_key="CADyn7RJ5sXnikvmipLYLSyWhoUvJS56FksKuAEQ")  
 
 # Directory to save Excel files
 excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
@@ -248,11 +248,11 @@ def main():
         if question_data["options"]:
             answer = st.radio("Choisissez une option :", question_data["options"], key=current_question_key)
             if answer:
-                # If the answer has changed, go to the next question instantly
                 if st.session_state.user_answers.get(current_question_key) != answer:
                     st.session_state.user_answers[current_question_key] = answer
                     st.session_state.current_question = get_next_question(answer, current_question_key)
                     st.experimental_rerun()
+                    return  # Prevents further code execution after rerun
         else:
             answer = st.text_input("Votre réponse :", key=current_question_key)
             if st.button("Suivant"):
@@ -260,6 +260,7 @@ def main():
                     st.session_state.user_answers[current_question_key] = answer
                     st.session_state.current_question = get_next_question(answer, current_question_key)
                     st.experimental_rerun()
+                    return  # Prevents further code execution after rerun
                 else:
                     st.warning("Veuillez entrer une réponse.")
     else:
