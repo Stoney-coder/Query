@@ -4,12 +4,12 @@ import os
 from datetime import datetime
 import cohere
 
-# --- Robust Custom CSS for branding and all-white font, including radio/select options ---
+# --- Custom CSS for white background and dark green font ---
 st.markdown("""
     <style>
         body, .stApp {
-            background-color: #08312A !important;
-            color: #FFFFFF !important;
+            background-color: #FFFFFF !important;
+            color: #08312A !important;
         }
         .stButton > button {
             color: #FFFFFF !important;
@@ -19,8 +19,8 @@ st.markdown("""
         }
         .stTextInput > div > div > input,
         .stTextArea > div > textarea {
-            background-color: #08312A !important;
-            color: #FFFFFF !important;
+            background-color: #FFFFFF !important;
+            color: #08312A !important;
             border: 1px solid #00E47C !important;
         }
         /* Label and radio/checkbox/select labels */
@@ -32,12 +32,12 @@ st.markdown("""
         [data-testid="stSelectboxLabel"],
         [data-testid="stTextInputLabel"],
         [data-testid="stTextAreaLabel"] {
-            color: #FFFFFF !important;
+            color: #08312A !important;
         }
         /* Headings and subheaders */
         h1, h2, h3, h4, h5, h6,
         .stMarkdown, .stSubheader, .stText, .stAlert {
-            color: #FFFFFF !important;
+            color: #08312A !important;
         }
         .stAlert {
             background-color: #00E47C !important;
@@ -45,23 +45,22 @@ st.markdown("""
         }
         ::selection {
             background: #00E47C;
-            color: #08312A;
+            color: #FFFFFF;
         }
         /* Streamlit text area text color */
         .stTextArea textarea {
-            color: #FFFFFF !important;
-            background-color: #08312A !important;
+            color: #08312A !important;
+            background-color: #FFFFFF !important;
         }
-        /* Force all spans in radio/select/checkbox to white */
+        /* Force all option spans in radio/select/checkbox to dark green */
         .stRadio span, .stCheckbox span, .stSelectbox span,
         [data-testid="stRadioItem"] > div > div > span,
         [data-testid="stSelectboxOption"] > div > span,
         [data-testid="stRadioItemLabel"] {
-            color: #FFFFFF !important;
+            color: #08312A !important;
         }
-        /* For Streamlit >= 1.30, target new option containers */
         [data-testid="stRadioItem"] *, [data-testid="stSelectboxOption"] * {
-            color: #FFFFFF !important;
+            color: #08312A !important;
         }
     </style>
 """, unsafe_allow_html=True)
