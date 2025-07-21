@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 import cohere
 
-# --- Custom CSS for branding and white font ---
+# --- Robust Custom CSS for branding and all-white font, including radio/select options ---
 st.markdown("""
     <style>
         body, .stApp {
@@ -51,6 +51,17 @@ st.markdown("""
         .stTextArea textarea {
             color: #FFFFFF !important;
             background-color: #08312A !important;
+        }
+        /* Force all spans in radio/select/checkbox to white */
+        .stRadio span, .stCheckbox span, .stSelectbox span,
+        [data-testid="stRadioItem"] > div > div > span,
+        [data-testid="stSelectboxOption"] > div > span,
+        [data-testid="stRadioItemLabel"] {
+            color: #FFFFFF !important;
+        }
+        /* For Streamlit >= 1.30, target new option containers */
+        [data-testid="stRadioItem"] *, [data-testid="stSelectboxOption"] * {
+            color: #FFFFFF !important;
         }
     </style>
 """, unsafe_allow_html=True)
