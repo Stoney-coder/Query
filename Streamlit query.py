@@ -62,7 +62,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- Cohere Client ---
-co = cohere.Client(api_key="CADyn7RJ5sXnikvmipLYLSyWhoUvJS56FksKuAEQ")  
+co = cohere.Client(api_key="YOUR_API_KEY")  # Replace with your API key!
 
 # --- Directory for Excel export ---
 excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
@@ -133,9 +133,11 @@ questions = {
     "additional_requirements": {
         "question": "7.1. Y a-t-il des exigences supplémentaires ? ❓",
         "options": []
-    },
-    "final": {"question": "Fin du formulaire 🏁", "options": []}
+    }
+    # !!! DO NOT include "final" as a question !!!
 }
+
+FINAL_KEY = "final"
 
 def get_next_question(answer, previous_question):
     mapping = {
@@ -158,7 +160,7 @@ def get_next_question(answer, previous_question):
         "sku_frequency": "dotation",
         "dotation": {"Oui": "dotation_yes", "Non": "additional_requirements"},
         "dotation_yes": "additional_requirements",
-        "additional_requirements": "final"
+        "additional_requirements": FINAL_KEY
     }
     next_question = mapping.get(previous_question)
     if isinstance(next_question, dict):
@@ -234,10 +236,10 @@ def main():
         st.session_state.user_answers = {}
 
     current_question_key = st.session_state.current_question
-    question_data = questions.get(current_question_key)
-    widget_key = f"widget_{current_question_key}"
 
-    if question_data:
+    if current_question_key != FINAL_KEY:
+        question_data = questions.get(current_question_key)
+        widget_key = f"widget_{current_question_key}"
         st.subheader(question_data["question"])
         with st.form(key=f"form_{current_question_key}"):
             if question_data["options"]:
@@ -256,14 +258,15 @@ def main():
                         if next_widget_key in st.session_state:
                             del st.session_state[next_widget_key]
                     else:
-                        st.session_state.current_question = "final"
-                    # DO NOT CALL st.experimental_rerun() HERE!
+                        st.session_state.current_question = FINAL_KEY
                 else:
                     st.warning("Veuillez entrer une réponse avant de continuer.")
-        # Show info if user hasn't answered yet
+
         if widget_key not in st.session_state or not st.session_state[widget_key]:
             st.info("Veuillez répondre avant de cliquer sur Suivant.")
     else:
+        # Only show recommendations, not a question or input!
+        st.header("Fin du formulaire 🏁")
         show_recommendation()
 
 if __name__ == "__main__":
