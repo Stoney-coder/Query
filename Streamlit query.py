@@ -5,7 +5,7 @@ from datetime import datetime
 import cohere
 
 # Initialize Cohere Client
-co = cohere.Client(api_key="CADyn7RJ5sXnikvmipLYLSyWhoUvJS56FksKuAEQ")
+co = cohere.Client(api_key="YOUR_API_KEY")  # Replace with your actual API key
 
 # Directory to save Excel files
 excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
@@ -203,6 +203,34 @@ def show_recommendation():
 
 # Main Streamlit application
 def main():
+    # Add enterprise colors via custom CSS
+    st.markdown(
+        """
+        <style>
+        .main {
+            background-color: #08312A;
+        }
+        .stButton>button {
+            background-color: #00E47C;
+            color: #08312A;
+            font-weight: bold;
+            border: 2px solid #08312A;
+        }
+        .stRadio>div>label {
+            color: #00E47C !important;
+            font-weight: bold;
+        }
+        .stTextInput>div>input {
+            border: 2px solid #00E47C;
+        }
+        .stTextArea textarea {
+            border: 2px solid #00E47C;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
     st.title("Outil Marketing Survey")
     st.write("Merci de répondre aux questions pour obtenir des recommandations personnalisées.")
 
@@ -219,15 +247,21 @@ def main():
         st.subheader(question_data["question"])
         if question_data["options"]:
             answer = st.radio("Choisissez une option :", question_data["options"], key=current_question_key)
+            if answer:
+                # If the answer has changed, go to the next question instantly
+                if st.session_state.user_answers.get(current_question_key) != answer:
+                    st.session_state.user_answers[current_question_key] = answer
+                    st.session_state.current_question = get_next_question(answer, current_question_key)
+                    st.experimental_rerun()
         else:
             answer = st.text_input("Votre réponse :", key=current_question_key)
-
-        if st.button("Suivant"):
-            if answer:
-                st.session_state.user_answers[current_question_key] = answer
-                st.session_state.current_question = get_next_question(answer, current_question_key)
-            else:
-                st.warning("Veuillez entrer une réponse.")
+            if st.button("Suivant"):
+                if answer:
+                    st.session_state.user_answers[current_question_key] = answer
+                    st.session_state.current_question = get_next_question(answer, current_question_key)
+                    st.experimental_rerun()
+                else:
+                    st.warning("Veuillez entrer une réponse.")
     else:
         show_recommendation()
 
