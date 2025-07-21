@@ -4,8 +4,44 @@ import os
 from datetime import datetime
 import cohere
 
+# Inject custom CSS for branding
+st.markdown("""
+    <style>
+        body {
+            background-color: #08312A !important;
+        }
+        .stApp {
+            background-color: #08312A !important;
+        }
+        .stButton>button {
+            color: #08312A !important;
+            background: #00E47C !important;
+            border: none !important;
+            border-radius: 8px !important;
+        }
+        .stTextInput>div>div>input, .stTextArea>div>textarea {
+            background-color: #08312A !important;
+            color: #00E47C !important;
+            border: 1px solid #00E47C !important;
+        }
+        .stRadio>div>label {
+            color: #00E47C !important;
+        }
+        .st-bd, .st-c3, .st-dh, .st-be, .st-cg {
+            background-color: #08312A !important;
+        }
+        h1, h2, h3, h4, h5, h6, .stMarkdown, .stSubheader {
+            color: #00E47C !important;
+        }
+        .stAlert {
+            background-color: #00E47C !important;
+            color: #08312A !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # Initialize Cohere Client
-co = cohere.Client(api_key="CADyn7RJ5sXnikvmipLYLSyWhoUvJS56FksKuAEQ")  
+co = cohere.Client(api_key="CADyn7RJ5sXnikvmipLYLSyWhoUvJS56FksKuAEQ")  # Replace with your actual API key
 
 # Directory to save Excel files
 excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
@@ -230,7 +266,6 @@ def main():
                     st.session_state.current_question = next_question
                 else:
                     st.session_state.current_question = "final"
-                # No need to call st.experimental_rerun() here; Streamlit reruns the script automatically on state change
             else:
                 st.warning("Veuillez entrer une réponse.")
     else:
