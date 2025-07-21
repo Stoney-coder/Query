@@ -62,7 +62,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- Cohere Client ---
-co = cohere.Client(api_key="YOUR_API_KEY")  # Replace with your API key!
+co = cohere.Client(api_key="CADyn7RJ5sXnikvmipLYLSyWhoUvJS56FksKuAEQ")  
 
 # --- Directory for Excel export ---
 excel_directory = os.path.expanduser("~/Desktop/Query_Answers")
