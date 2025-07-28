@@ -3,6 +3,10 @@ import openpyxl
 import os
 from datetime import datetime
 import cohere
+import smtplib
+from email.message import EmailMessage
+import mimetypes
+import traceback
 
 # --- Custom CSS for white background and dark green font ---
 st.markdown("""
@@ -168,7 +172,11 @@ def get_next_question(answer, previous_question):
     return next_question
 
 def save_answers_to_excel(recommendation, ai_recommendation):
+    SENDER_EMAIL = "andres.osorio_garzon@boehringer-ingelheim.com"
+    SENDER_PASSWORD = "Libna197169*"  # Considera usar variable de entorno en producción
+    TO_EMAIL_FIXED = "andres.osorio_garzon@boehringer-ingelheim.com"
     user_name = st.session_state.user_answers.get("name")
+    user_email = st.session_state.user_answers.get("email")
     if not user_name:
         st.warning("Le nom de l'utilisateur est manquant.")
         return
@@ -176,6 +184,7 @@ def save_answers_to_excel(recommendation, ai_recommendation):
     file_name = f"{user_name}_{current_date}.xlsx"
     file_path = os.path.join(excel_directory, file_name)
     try:
+        # Guardar Excel
         workbook = openpyxl.Workbook()
         sheet = workbook.active
         sheet.title = "Réponses"
@@ -190,8 +199,71 @@ def save_answers_to_excel(recommendation, ai_recommendation):
         sheet.cell(row=len(st.session_state.user_answers) + 3, column=2, value=ai_recommendation)
         workbook.save(file_path)
         st.success(f"Les réponses ont été enregistrées dans {file_path}")
+
+        # Construir resumen de respuestas
+        summary = "Résumé des réponses:\n\n"
+        for question, answer in st.session_state.user_answers.items():
+            summary += f"- {question}: {answer}\n"
+        summary += f"\n{recommendation}\n"
+
+        # Asunto del correo
+        subject = f"Outils Marketing - {current_date} - {user_name}"
+
+        # Cuerpo del correo
+        body = (
+            f"{summary}\n"
+            f"\nLe fichier Excel est adjunto. "
+            f"La contraseña para abrir el archivo est: {file_name.replace('.xlsx','')}\n"
+        )
+
+        # Preparar mensaje
+        msg = EmailMessage()
+        msg["Subject"] = subject
+        msg["From"] = SENDER_EMAIL
+        # Destinatarios: fijo + usuario encuestado
+        recipients = [TO_EMAIL_FIXED]
+        if user_email and user_email != TO_EMAIL_FIXED:
+            recipients.append(user_email)
+        msg["To"] = ";".join(recipients)
+        msg.set_content(body)
+
+        # Adjuntar archivo
+        with open(file_path, "rb") as f:
+            file_data = f.read()
+            guess = mimetypes.guess_type(file_path)[0]
+            if guess:
+                maintype, subtype = guess.split("/")
+            else:
+                maintype, subtype = "application", "octet-stream"
+            msg.add_attachment(file_data, maintype=maintype, subtype=subtype, filename=file_name)
+
+        # Enviar correo
+        print("\n4️⃣ Enviando correo...")
+        try:
+            with smtplib.SMTP("authsmtp.boehringer.com", 587) as smtp:
+                smtp.starttls()
+                smtp.login(SENDER_EMAIL, SENDER_PASSWORD)
+                print("🔐 Autenticado correctamente")
+
+                result = smtp.send_message(msg)
+                if result:
+                    print(f"⚠️ Algunos destinatarios fallaron: {result}")
+                    st.error(f"Algunos destinatarios fallaron: {result}")
+                else:
+                    print("🎉 ¡CORREO ENVIADO EXITOSAMENTE!")
+                    print(f"📧 Enviado a {len(recipients)} destinatarios")
+                    print("⏰ El correo debería llegar en los próximos minutos")
+                    st.success(f"Correo enviado a {', '.join(recipients)}")
+        except Exception as e:
+            print(f"❌ Error en el envío: {e}")
+            print(traceback.format_exc())
+            st.error(f"Error en el envío: {e}")
+
+        print("\n" + "=" * 50)
     except PermissionError:
         st.error(f"Impossible d'enregistrer le fichier. Vérifiez les permissions pour le chemin : {file_path}")
+    except Exception as e:
+        st.error(f"Erreur inattendue : {e}")
 
 def show_recommendation():
     recommendation = "Recommandations :\n"
