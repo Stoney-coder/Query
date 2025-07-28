@@ -4,70 +4,19 @@ from datetime import datetime
 from io import BytesIO
 import cohere
 
-# --- Custom CSS for white background and dark green font, full width recommendations ---
+# --- Custom CSS ---
 st.markdown("""
     <style>
-        body, .stApp {
-            background-color: #FFFFFF !important;
-            color: #08312A !important;
-        }
+        .stTextArea textarea, .stTextArea, .full-width-reco {width: 100% !important;}
         .stButton > button {
             color: #FFFFFF !important;
             background: #00E47C !important;
             border: none !important;
             border-radius: 8px !important;
         }
-        .stTextInput > div > div > input,
-        .stTextArea > div > textarea {
-            background-color: #FFFFFF !important;
-            color: #08312A !important;
-            border: 1px solid #00E47C !important;
-        }
-        label,
-        .css-1c7y2kd,
-        .stRadio label,
-        .stCheckbox label,
-        [data-testid="stRadioLabel"],
-        [data-testid="stSelectboxLabel"],
-        [data-testid="stTextInputLabel"],
-        [data-testid="stTextAreaLabel"] {
-            color: #08312A !important;
-        }
-        h1, h2, h3, h4, h5, h6,
-        .stMarkdown, .stSubheader, .stText, .stAlert {
-            color: #08312A !important;
-        }
-        .stAlert {
-            background-color: #00E47C !important;
-            color: #08312A !important;
-        }
-        ::selection {
-            background: #00E47C;
-            color: #FFFFFF;
-        }
-        .stTextArea textarea {
-            color: #08312A !important;
-            background-color: #FFFFFF !important;
-            width: 100% !important;
-            min-width: 100% !important;
-            max-width: 100% !important;
-        }
-        .stTextArea {
-            width: 100% !important;
-        }
-        .stRadio span, .stCheckbox span, .stSelectbox span,
-        [data-testid="stRadioItem"] > div > div > span,
-        [data-testid="stSelectboxOption"] > div > span,
-        [data-testid="stRadioItemLabel"] {
-            color: #08312A !important;
-        }
-        [data-testid="stRadioItem"] *, [data-testid="stSelectboxOption"] * {
-            color: #08312A !important;
-        }
     </style>
 """, unsafe_allow_html=True)
 
-# --- Cohere Client ---
 co = cohere.Client(api_key="nwQE8lzxJVgUHFiBSj3cVc8JBjuNwyZJrJjRgteb")
 
 questions = {
@@ -136,7 +85,6 @@ questions = {
         "question": "7.1. Y a-t-il des exigences supplémentaires ? ❓",
         "options": []
     }
-    # !!! DO NOT include "final" as a question !!!
 }
 
 FINAL_KEY = "final"
@@ -169,6 +117,30 @@ def get_next_question(answer, previous_question):
         return next_question.get(answer)
     return next_question
 
+def get_prev_question(current_question, answers):
+    # Build reverse mapping based on answers
+    # This is a bit manual:
+    keys = list(questions.keys())
+    if current_question == keys[0]:
+        return None  # First question, can't go back
+    prev = None
+    for k in keys:
+        if current_question == k:
+            break
+        prev = k
+    # For branching, walk through the answer path:
+    # We need to reconstruct the path by replaying get_next_question
+    path = [keys[0]]
+    for i in range(len(answers)):
+        q = path[-1]
+        a = answers.get(q)
+        n = get_next_question(a, q)
+        if n == current_question:
+            return q
+        if n:
+            path.append(n)
+    return prev
+
 def save_answers_to_excel(recommendation, ai_recommendation):
     user_name = st.session_state.user_answers.get("name")
     if not user_name:
@@ -176,7 +148,6 @@ def save_answers_to_excel(recommendation, ai_recommendation):
         return None, None
     current_date = datetime.now().strftime("%d-%m-%Y")
     file_name = f"{user_name}_{current_date}.xlsx"
-
     output = BytesIO()
     workbook = openpyxl.Workbook()
     sheet = workbook.active
@@ -208,7 +179,6 @@ def show_recommendation():
     dotation = st.session_state.user_answers.get("dotation")
     if dotation == "Oui":
         recommendation += "- Priorisez la planification logistique avec le 3PL pour respecter les délais impératifs.\n"
-
     def get_ai_recommendation(answers):
         try:
             prompt = "Voici les réponses d'un utilisateur à un questionnaire :\n"
@@ -219,14 +189,11 @@ def show_recommendation():
             return response.generations[0].text.strip()
         except Exception as e:
             return f"Erreur lors de la génération des recommandations IA : {str(e)}"
-
     ai_recommendation = get_ai_recommendation(st.session_state.user_answers)
     recommendation_full = f"{recommendation}\nRecommandations IA :\n{ai_recommendation}"
-
     st.markdown('<div class="full-width-reco">', unsafe_allow_html=True)
     st.text_area("Recommandations", recommendation_full, height=300)
     st.markdown('</div>', unsafe_allow_html=True)
-
     if st.button("Télécharger les réponses"):
         excel_bytes, excel_filename = save_answers_to_excel(recommendation, ai_recommendation)
         if excel_bytes:
@@ -243,51 +210,44 @@ def show_recommendation():
 def main():
     st.title("Outil Marketing Survey")
     st.write("Merci de répondre aux questions pour obtenir des recommandations personnalisées.")
-
     # Init session state
     if "current_question" not in st.session_state:
         st.session_state.current_question = "name"
     if "user_answers" not in st.session_state:
         st.session_state.user_answers = {}
-
     current_question_key = st.session_state.current_question
-
     if current_question_key != FINAL_KEY:
         question_data = questions.get(current_question_key)
         widget_key = f"widget_{current_question_key}"
-
         st.subheader(question_data["question"])
-        # Usar directamente el valor de session_state
+        # RESPUESTA
         if question_data["options"]:
-            st.radio("Choisissez une option :", question_data["options"], key=widget_key)
-            answer = st.session_state.get(widget_key, "")
+            answer = st.radio("Choisissez une option :", question_data["options"], key=widget_key)
         else:
-            st.text_input("Votre réponse :", key=widget_key)
-            answer = st.session_state.get(widget_key, "")
-
-        if answer:
-            button_label = "Suivant 🔓"
-            button_disabled = False
-        else:
-            button_label = "Suivant 🔒"
-            button_disabled = True
-
-        submitted = st.button(button_label, disabled=button_disabled)
-
-        if submitted and answer:
-            st.session_state.user_answers[current_question_key] = answer
-            next_question = get_next_question(answer, current_question_key)
-            if next_question:
-                st.session_state.current_question = next_question
-                next_widget_key = f"widget_{next_question}"
-                if next_widget_key in st.session_state:
-                    del st.session_state[next_widget_key]
-            else:
-                st.session_state.current_question = FINAL_KEY
-
+            answer = st.text_input("Votre réponse :", key=widget_key)
+        # Ayuda si falta respuesta
         if not answer:
             st.info("Veuillez répondre pour continuer.")
-
+        col1, col2 = st.columns([1,1])
+        # Botón PRECEDENT
+        prev_question = get_prev_question(current_question_key, st.session_state.user_answers)
+        with col1:
+            if prev_question:
+                if st.button("Précédent ⬅️"):
+                    st.session_state.current_question = prev_question
+        # Botón SUIVANT
+        with col2:
+            button_label = "Suivant 🔓" if answer else "Suivant 🔒"
+            if st.button(button_label, disabled=not answer):
+                st.session_state.user_answers[current_question_key] = answer
+                next_question = get_next_question(answer, current_question_key)
+                if next_question:
+                    st.session_state.current_question = next_question
+                    next_widget_key = f"widget_{next_question}"
+                    if next_widget_key in st.session_state:
+                        del st.session_state[next_widget_key]
+                else:
+                    st.session_state.current_question = FINAL_KEY
     else:
         st.header("Fin du formulaire 🏁")
         show_recommendation()
