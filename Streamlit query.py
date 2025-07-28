@@ -4,7 +4,7 @@ from datetime import datetime
 from io import BytesIO
 import cohere
 
-# --- Custom CSS for white background and dark green font ---
+# --- Custom CSS for white background and dark green font, full width recommendations ---
 st.markdown("""
     <style>
         body, .stApp {
@@ -48,6 +48,12 @@ st.markdown("""
         .stTextArea textarea {
             color: #08312A !important;
             background-color: #FFFFFF !important;
+            width: 100% !important;
+            min-width: 100% !important;
+            max-width: 100% !important;
+        }
+        .stTextArea {
+            width: 100% !important;
         }
         .stRadio span, .stCheckbox span, .stSelectbox span,
         [data-testid="stRadioItem"] > div > div > span,
@@ -210,14 +216,19 @@ def show_recommendation():
             for question, answer in answers.items():
                 prompt += f"- {question}: {answer}\n"
             prompt += "Basé sur ces réponses, fournissez des recommandations supplémentaires pertinentes (max 30 mots) :"
-            response = co.generate(prompt=prompt, model="command") # Cambia 'xlarge' por 'command'
+            response = co.generate(prompt=prompt, model="command")
             return response.generations[0].text.strip()
         except Exception as e:
             return f"Erreur lors de la génération des recommandations IA : {str(e)}"
 
     ai_recommendation = get_ai_recommendation(st.session_state.user_answers)
     recommendation_full = f"{recommendation}\nRecommandations IA :\n{ai_recommendation}"
-    st.text_area("Recommandations", recommendation_full)
+
+    # Full width recommendations
+    st.markdown('<div class="full-width-reco">', unsafe_allow_html=True)
+    st.text_area("Recommandations", recommendation_full, height=300)
+    st.markdown('</div>', unsafe_allow_html=True)
+
     if st.button("Télécharger les réponses"):
         excel_bytes, excel_filename = save_answers_to_excel(recommendation, ai_recommendation)
         if excel_bytes:
@@ -240,38 +251,56 @@ def main():
         st.session_state.current_question = "name"
     if "user_answers" not in st.session_state:
         st.session_state.user_answers = {}
+    if "lock_state" not in st.session_state:
+        st.session_state.lock_state = "locked"  # Possible values: "locked", "unlocked"
 
     current_question_key = st.session_state.current_question
 
     if current_question_key != FINAL_KEY:
         question_data = questions.get(current_question_key)
         widget_key = f"widget_{current_question_key}"
+
         st.subheader(question_data["question"])
         with st.form(key=f"form_{current_question_key}"):
             if question_data["options"]:
                 answer = st.radio("Choisissez une option :", question_data["options"], key=widget_key)
             else:
                 answer = st.text_input("Votre réponse :", key=widget_key)
-            submitted = st.form_submit_button("Suivant")
+
+            # Change button icon based on lock_state
+            if st.session_state.lock_state == "locked":
+                button_label = "Suivant 🔒"
+            else:
+                button_label = "Suivant 🔓"
+
+            submitted = st.form_submit_button(button_label)
+
             if submitted:
-                if answer:
-                    st.session_state.user_answers[current_question_key] = answer
+                if st.session_state.lock_state == "locked":
+                    # First click: Save answer, switch to unlocked
+                    if answer:
+                        st.session_state.user_answers[current_question_key] = answer
+                        st.session_state.lock_state = "unlocked"
+                    else:
+                        st.warning("Veuillez entrer une réponse avant de continuer.")
+                else:
+                    # Second click: Go to next question, reset lock
                     next_question = get_next_question(answer, current_question_key)
                     if next_question:
                         st.session_state.current_question = next_question
+                        st.session_state.lock_state = "locked"
                         # Clear widget state for next question to avoid carryover
                         next_widget_key = f"widget_{next_question}"
                         if next_widget_key in st.session_state:
                             del st.session_state[next_widget_key]
                     else:
                         st.session_state.current_question = FINAL_KEY
-                else:
-                    st.warning("Veuillez entrer une réponse avant de continuer.")
+                        st.session_state.lock_state = "locked"
 
         if widget_key not in st.session_state or not st.session_state[widget_key]:
             st.info("Veuillez répondre avant de cliquer sur Suivant.")
     else:
-        # Only show recommendations, not a question or input!
+        # Recommendations full width
         st.header("Fin du formulaire 🏁")
         show_recommendation()
 
