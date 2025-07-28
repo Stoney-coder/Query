@@ -4,7 +4,7 @@ from datetime import datetime
 from io import BytesIO
 import cohere
 
-# --- Custom CSS ---
+# --- CSS personnalisé ---
 st.markdown("""
     <style>
         .stTextArea textarea, .stTextArea, .full-width-reco {width: 100% !important;}
@@ -17,7 +17,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-co = cohere.Client(api_key="nwQE8lzxJVgUHFiBSj3cVc8JBjuNwyZJrJjRgteb")
+co = cohere.Client(api_key="VOTRE_COHERE_API_KEY")  # Remplacez par votre clé
 
 questions = {
     "name": {"question": "1.1. Quel est votre nom et prénom ? 😊", "options": []},
@@ -42,7 +42,7 @@ questions = {
         "options": ["Oui", "Non"]
     },
     "quantity_minimum_yes": {
-        "question": "Indiquez la quantité minimale requise : 🔢, ou à négocier? - Y a t il des paliers de prix avec remise possible?",
+        "question": "Indiquez la quantité minimale requise : 🔢, ou à négocier? - Y a t-il des paliers de prix avec remise possible?",
         "options": []
     },
     "coverage_duration": {
@@ -86,7 +86,6 @@ questions = {
         "options": []
     }
 }
-
 FINAL_KEY = "final"
 
 def get_next_question(answer, previous_question):
@@ -117,6 +116,21 @@ def get_next_question(answer, previous_question):
         return next_question.get(answer)
     return next_question
 
+def get_prev_question(current_question, answers):
+    keys = list(questions.keys())
+    if current_question == keys[0]:
+        return None
+    path = [keys[0]]
+    for i in range(len(answers)):
+        q = path[-1]
+        a = answers.get(q)
+        n = get_next_question(a, q)
+        if n == current_question:
+            return q
+        if n:
+            path.append(n)
+    return None
+
 def save_answers_to_excel(recommendation, ai_recommendation):
     user_name = st.session_state.user_answers.get("name")
     if not user_name:
@@ -145,13 +159,13 @@ def show_recommendation():
     recommendation = "Recommandations :\n"
     product_code = st.session_state.user_answers.get("product_code")
     if product_code == "Non":
-        recommendation += "- Assurez-vous de créer un nouveau code dans le système avant de passer commande.\n"
+        recommendation += "- Veuillez créer un nouveau code dans le système avant de passer commande.\n"
     quantity_minimum = st.session_state.user_answers.get("supplier_conditions")
     if quantity_minimum == "Oui":
-        recommendation += "- Recommandez une analyse de consommation historique pour ajuster les hypothèses de réapprovisionnement.\n"
+        recommendation += "- Il est conseillé d’analyser la consommation historique pour adapter les hypothèses de réapprovisionnement.\n"
     supplier_location = st.session_state.user_answers.get("supplier_location")
     if supplier_location == "Grand export":
-        recommendation += "- Prévoir un délai logistique plus long et anticiper les commandes.\n"
+        recommendation += "- Prévoyez un délai logistique plus long et anticipez les commandes.\n"
     dotation = st.session_state.user_answers.get("dotation")
     if dotation == "Oui":
         recommendation += "- Priorisez la planification logistique avec le 3PL pour respecter les délais impératifs.\n"
@@ -160,7 +174,7 @@ def show_recommendation():
             prompt = "Voici les réponses d'un utilisateur à un questionnaire :\n"
             for question, answer in answers.items():
                 prompt += f"- {question}: {answer}\n"
-            prompt += "Basé sur ces réponses, fournissez des recommandations supplémentaires pertinentes (max 30 mots) :"
+            prompt += "En vous basant sur ces réponses, fournissez des recommandations supplémentaires pertinentes (max 30 mots, en français) :"
             response = co.generate(prompt=prompt, model="command")
             return response.generations[0].text.strip()
         except Exception as e:
@@ -179,14 +193,14 @@ def show_recommendation():
                 file_name=excel_filename,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-            st.info(f"La contraseña pour ouvrir le fichier est: {excel_filename.replace('.xlsx','')}")
+            st.info(f"Le mot de passe pour ouvrir le fichier est : {excel_filename.replace('.xlsx','')}")
         else:
             st.error("Erreur lors de la création du fichier Excel.")
 
 def main():
     st.title("Outil Marketing Survey")
     st.write("Merci de répondre aux questions pour obtenir des recommandations personnalisées.")
-    # Init session state
+    # Initialisation de l'état
     if "current_question" not in st.session_state:
         st.session_state.current_question = "name"
     if "user_answers" not in st.session_state:
@@ -196,13 +210,19 @@ def main():
         question_data = questions.get(current_question_key)
         widget_key = f"widget_{current_question_key}"
         st.subheader(question_data["question"])
-        # RESPUESTA
+        # Affichage et réponse
         if question_data["options"]:
             answer = st.radio("Choisissez une option :", question_data["options"], key=widget_key)
         else:
             answer = st.text_input("Votre réponse :", key=widget_key)
         col1, col2 = st.columns([1,1])
-        # Botón SUIVANT
+        # Bouton Précédent
+        prev_question = get_prev_question(current_question_key, st.session_state.user_answers)
+        with col1:
+            if prev_question:
+                if st.button("Précédent ⬅️"):
+                    st.session_state.current_question = prev_question
+        # Bouton Suivant
         with col2:
             if st.button("Suivant"):
                 st.session_state.user_answers[current_question_key] = answer
@@ -214,7 +234,7 @@ def main():
                         del st.session_state[next_widget_key]
                 else:
                     st.session_state.current_question = FINAL_KEY
-        # Mensaje claro abajo
+        # Message d'aide
         st.markdown("<br><div style='color:#08312A;font-weight:bold;'>Remarque : Pour passer à la prochaine question, veuillez répondre puis cliquer deux fois sur 'Suivant'.</div>", unsafe_allow_html=True)
     else:
         st.header("Fin du formulaire 🏁")
