@@ -257,39 +257,36 @@ def main():
         widget_key = f"widget_{current_question_key}"
 
         st.subheader(question_data["question"])
-        with st.form(key=f"form_{current_question_key}"):
-            # Get response value from session state if exists
-            prior_answer = st.session_state.user_answers.get(current_question_key, "")
-            if question_data["options"]:
-                answer = st.radio("Choisissez une option :", question_data["options"], key=widget_key)
+        # Usar directamente el valor de session_state
+        if question_data["options"]:
+            st.radio("Choisissez une option :", question_data["options"], key=widget_key)
+            answer = st.session_state.get(widget_key, "")
+        else:
+            st.text_input("Votre réponse :", key=widget_key)
+            answer = st.session_state.get(widget_key, "")
+
+        if answer:
+            button_label = "Suivant 🔓"
+            button_disabled = False
+        else:
+            button_label = "Suivant 🔒"
+            button_disabled = True
+
+        submitted = st.button(button_label, disabled=button_disabled)
+
+        if submitted and answer:
+            st.session_state.user_answers[current_question_key] = answer
+            next_question = get_next_question(answer, current_question_key)
+            if next_question:
+                st.session_state.current_question = next_question
+                next_widget_key = f"widget_{next_question}"
+                if next_widget_key in st.session_state:
+                    del st.session_state[next_widget_key]
             else:
-                answer = st.text_input("Votre réponse :", value=prior_answer, key=widget_key)
+                st.session_state.current_question = FINAL_KEY
 
-            # Button label and enabled logic
-            if answer:
-                button_label = "Suivant 🔓"
-                button_disabled = False
-            else:
-                button_label = "Suivant 🔒"
-                button_disabled = True
-
-            submitted = st.form_submit_button(button_label, disabled=button_disabled)
-
-            if submitted and answer:
-                st.session_state.user_answers[current_question_key] = answer
-                next_question = get_next_question(answer, current_question_key)
-                if next_question:
-                    st.session_state.current_question = next_question
-                    # Clear widget state for next question to avoid carryover
-                    next_widget_key = f"widget_{next_question}"
-                    if next_widget_key in st.session_state:
-                        del st.session_state[next_widget_key]
-                else:
-                    st.session_state.current_question = FINAL_KEY
-
-            # Help message if field is empty
-            if not answer:
-                st.info("Veuillez répondre pour continuer.")
+        if not answer:
+            st.info("Veuillez répondre pour continuer.")
 
     else:
         st.header("Fin du formulaire 🏁")
