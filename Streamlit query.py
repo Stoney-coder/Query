@@ -17,7 +17,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-co = cohere.Client(api_key="VOTRE_COHERE_API_KEY")  # Remplacez par votre clé
+co = cohere.Client(api_key="nwQE8lzxJVgUHFiBSj3cVc8JBjuNwyZJrJjRgteb")
 
 questions = {
     "name": {"question": "1.1. Quel est votre nom et prénom ? 😊", "options": []},
