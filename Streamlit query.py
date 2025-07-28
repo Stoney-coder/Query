@@ -117,30 +117,6 @@ def get_next_question(answer, previous_question):
         return next_question.get(answer)
     return next_question
 
-def get_prev_question(current_question, answers):
-    # Build reverse mapping based on answers
-    # This is a bit manual:
-    keys = list(questions.keys())
-    if current_question == keys[0]:
-        return None  # First question, can't go back
-    prev = None
-    for k in keys:
-        if current_question == k:
-            break
-        prev = k
-    # For branching, walk through the answer path:
-    # We need to reconstruct the path by replaying get_next_question
-    path = [keys[0]]
-    for i in range(len(answers)):
-        q = path[-1]
-        a = answers.get(q)
-        n = get_next_question(a, q)
-        if n == current_question:
-            return q
-        if n:
-            path.append(n)
-    return prev
-
 def save_answers_to_excel(recommendation, ai_recommendation):
     user_name = st.session_state.user_answers.get("name")
     if not user_name:
@@ -225,20 +201,10 @@ def main():
             answer = st.radio("Choisissez une option :", question_data["options"], key=widget_key)
         else:
             answer = st.text_input("Votre réponse :", key=widget_key)
-        # Ayuda si falta respuesta
-        if not answer:
-            st.info("Veuillez répondre pour continuer.")
         col1, col2 = st.columns([1,1])
-        # Botón PRECEDENT
-        prev_question = get_prev_question(current_question_key, st.session_state.user_answers)
-        with col1:
-            if prev_question:
-                if st.button("Précédent ⬅️"):
-                    st.session_state.current_question = prev_question
         # Botón SUIVANT
         with col2:
-            button_label = "Suivant 🔓" if answer else "Suivant 🔒"
-            if st.button(button_label, disabled=not answer):
+            if st.button("Suivant"):
                 st.session_state.user_answers[current_question_key] = answer
                 next_question = get_next_question(answer, current_question_key)
                 if next_question:
@@ -248,6 +214,8 @@ def main():
                         del st.session_state[next_widget_key]
                 else:
                     st.session_state.current_question = FINAL_KEY
+        # Mensaje claro abajo
+        st.markdown("<br><div style='color:#08312A;font-weight:bold;'>Remarque : Pour passer à la prochaine question, veuillez répondre puis cliquer deux fois sur 'Suivant'.</div>", unsafe_allow_html=True)
     else:
         st.header("Fin du formulaire 🏁")
         show_recommendation()
