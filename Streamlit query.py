@@ -177,7 +177,6 @@ def save_answers_to_excel(recommendation, ai_recommendation):
     current_date = datetime.now().strftime("%d-%m-%Y")
     file_name = f"{user_name}_{current_date}.xlsx"
 
-    # Crear archivo en memoria
     output = BytesIO()
     workbook = openpyxl.Workbook()
     sheet = workbook.active
@@ -224,7 +223,6 @@ def show_recommendation():
     ai_recommendation = get_ai_recommendation(st.session_state.user_answers)
     recommendation_full = f"{recommendation}\nRecommandations IA :\n{ai_recommendation}"
 
-    # Full width recommendations
     st.markdown('<div class="full-width-reco">', unsafe_allow_html=True)
     st.text_area("Recommandations", recommendation_full, height=300)
     st.markdown('</div>', unsafe_allow_html=True)
@@ -251,8 +249,6 @@ def main():
         st.session_state.current_question = "name"
     if "user_answers" not in st.session_state:
         st.session_state.user_answers = {}
-    if "lock_state" not in st.session_state:
-        st.session_state.lock_state = "locked"  # Possible values: "locked", "unlocked"
 
     current_question_key = st.session_state.current_question
 
@@ -262,45 +258,40 @@ def main():
 
         st.subheader(question_data["question"])
         with st.form(key=f"form_{current_question_key}"):
+            # Get response value from session state if exists
+            prior_answer = st.session_state.user_answers.get(current_question_key, "")
             if question_data["options"]:
                 answer = st.radio("Choisissez une option :", question_data["options"], key=widget_key)
             else:
-                answer = st.text_input("Votre réponse :", key=widget_key)
+                answer = st.text_input("Votre réponse :", value=prior_answer, key=widget_key)
 
-            # Change button icon based on lock_state
-            if st.session_state.lock_state == "locked":
-                button_label = "Suivant 🔒"
-            else:
+            # Button label and enabled logic
+            if answer:
                 button_label = "Suivant 🔓"
+                button_disabled = False
+            else:
+                button_label = "Suivant 🔒"
+                button_disabled = True
 
-            submitted = st.form_submit_button(button_label)
+            submitted = st.form_submit_button(button_label, disabled=button_disabled)
 
-            if submitted:
-                if st.session_state.lock_state == "locked":
-                    # First click: Save answer, switch to unlocked
-                    if answer:
-                        st.session_state.user_answers[current_question_key] = answer
-                        st.session_state.lock_state = "unlocked"
-                    else:
-                        st.warning("Veuillez entrer une réponse avant de continuer.")
+            if submitted and answer:
+                st.session_state.user_answers[current_question_key] = answer
+                next_question = get_next_question(answer, current_question_key)
+                if next_question:
+                    st.session_state.current_question = next_question
+                    # Clear widget state for next question to avoid carryover
+                    next_widget_key = f"widget_{next_question}"
+                    if next_widget_key in st.session_state:
+                        del st.session_state[next_widget_key]
                 else:
-                    # Second click: Go to next question, reset lock
-                    next_question = get_next_question(answer, current_question_key)
-                    if next_question:
-                        st.session_state.current_question = next_question
-                        st.session_state.lock_state = "locked"
-                        # Clear widget state for next question to avoid carryover
-                        next_widget_key = f"widget_{next_question}"
-                        if next_widget_key in st.session_state:
-                            del st.session_state[next_widget_key]
-                    else:
-                        st.session_state.current_question = FINAL_KEY
-                        st.session_state.lock_state = "locked"
+                    st.session_state.current_question = FINAL_KEY
 
-        if widget_key not in st.session_state or not st.session_state[widget_key]:
-            st.info("Veuillez répondre avant de cliquer sur Suivant.")
+            # Help message if field is empty
+            if not answer:
+                st.info("Veuillez répondre pour continuer.")
+
     else:
-        # Recommendations full width
         st.header("Fin du formulaire 🏁")
         show_recommendation()
 
