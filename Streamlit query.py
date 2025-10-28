@@ -5,7 +5,7 @@ from io import BytesIO
 import json
 import os
 
-# Intentar importar cohere solo si hay clave
+# Tenter d'importer cohere seulement si la clé existe
 COHERE_KEY = None
 try:
     COHERE_KEY = st.secrets.get("COHERE_API_KEY")
@@ -19,7 +19,7 @@ if COHERE_KEY:
     except Exception:
         co = None
 
-# --- CSS personalizado (mismos colores) ---
+# --- CSS personnalisé ---
 st.markdown("""
     <style>
         .stTextArea textarea, .stTextArea, .full-width-reco {width: 100% !important;}
@@ -35,7 +35,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Preguntas (idénticas, mismos emojis)
+# Questions (identiques, mêmes emojis)
 questions = {
     "name": {"question": "1.1. Quel est votre nom et prénom ? 😊", "options": []},
     "email": {"question": "1.2. Quelle est votre adresse e-mail ? 📧", "options": []},
@@ -134,7 +134,7 @@ def get_next_question(answer, previous_question):
     return next_question
 
 def build_path(answers):
-    """Construye la secuencia de preguntas según respuestas actuales."""
+    """Construit la séquence de questions selon les réponses actuelles."""
     path = []
     q = list(questions.keys())[0]
     while q and q != FINAL_KEY:
@@ -151,7 +151,7 @@ def get_prev_question(current_question, answers):
     return path[idx-1] if idx > 0 else None
 
 def save_answers_to_excel_bytes(recommendation, ai_recommendation, answers):
-    user_name = answers.get("name") or "usuario"
+    user_name = answers.get("name") or "utilisateur"
     current_date = datetime.now().strftime("%Y-%m-%d")
     file_name = f"{user_name}_{current_date}.xlsx"
     output = BytesIO()
@@ -173,7 +173,7 @@ def save_answers_to_excel_bytes(recommendation, ai_recommendation, answers):
 
 def get_ai_recommendation(answers):
     if not co:
-        return "Recommandations IA non disponibles (clave COHERE no configurada)."
+        return "Recommandations IA non disponibles (clé COHERE non configurée)."
     try:
         prompt = "Voici les réponses d'un utilisateur à un questionnaire :\n"
         for question, answer in answers.items():
@@ -184,7 +184,7 @@ def get_ai_recommendation(answers):
     except Exception as e:
         return f"Erreur IA : {str(e)}"
 
-# Inicializar estado
+# Initialiser l'état
 if "current_question" not in st.session_state:
     st.session_state.current_question = list(questions.keys())[0]
 if "user_answers" not in st.session_state:
@@ -192,10 +192,10 @@ if "user_answers" not in st.session_state:
 if "ai_recommendation" not in st.session_state:
     st.session_state.ai_recommendation = None
 
-# Sidebar: navegación, guardar/cargar progreso, compartir
+# Barre latérale: navigation, sauvegarder/charger le progrès
 with st.sidebar:
     st.markdown("<div class='sidebar-section'>", unsafe_allow_html=True)
-    st.markdown("### Navegación rápida")
+    st.markdown("### Navigation rapide")
     path = build_path(st.session_state.user_answers)
     for q in path:
         display = questions[q]["question"]
@@ -205,16 +205,16 @@ with st.sidebar:
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='sidebar-section'>", unsafe_allow_html=True)
-    st.markdown("### Progreso y opciones")
-    if st.button("Reiniciar encuesta"):
+    st.markdown("### Progrès et options")
+    if st.button("Réinitialiser l'enquête"):
         st.session_state.current_question = list(questions.keys())[0]
         st.session_state.user_answers = {}
         st.session_state.ai_recommendation = None
         st.rerun()
-    st.markdown("Guardar / Cargar progreso")
+    st.markdown("Sauvegarder / Charger le progrès")
     json_bytes = json.dumps(st.session_state.user_answers, ensure_ascii=False, indent=2).encode("utf-8")
-    st.download_button("Guardar progreso (JSON)", data=json_bytes, file_name="progreso_encuesta.json", mime="application/json")
-    uploaded = st.file_uploader("Cargar progreso (JSON)", type=["json"])
+    st.download_button("Sauvegarder progrès (JSON)", data=json_bytes, file_name="progres_enquete.json", mime="application/json")
+    uploaded = st.file_uploader("Charger progrès (JSON)", type=["json"])
     if uploaded:
         try:
             loaded = json.load(uploaded)
@@ -224,22 +224,16 @@ with st.sidebar:
                 st.session_state.current_question = path2[-1] if path2 else list(questions.keys())[0]
                 st.rerun()
             else:
-                st.error("JSON inválido.")
+                st.error("JSON invalide.")
         except Exception as e:
-            st.error(f"Error al cargar JSON: {e}")
+            st.error(f"Erreur lors du chargement JSON: {e}")
     st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<div class='sidebar-section'>", unsafe_allow_html=True)
-    st.markdown("### Compartir")
-    st.markdown("- Para compartir con colegas, despliegue en Streamlit Cloud o en un servidor accesible públicamente.")
-    st.markdown("- En Streamlit Cloud obtendrás un enlace público para compartir.")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# Cabecera principal
+# En-tête principal
 st.title("Outil Marketing Survey")
 st.write("Merci de répondre aux questions pour obtenir des recommandations personnalisées.")
 
-# Barra de progreso calculada
+# Barre de progrès calculée
 full_path = build_path(st.session_state.user_answers)
 total = max(1, len(full_path))
 if st.session_state.current_question in full_path:
@@ -250,7 +244,7 @@ progress = idx / total
 st.markdown(f"<div class='progress-label'>Progrès: {idx}/{len(full_path)}</div>", unsafe_allow_html=True)
 st.progress(progress)
 
-# Area principal de formulario
+# Zone principale du formulaire
 current_question_key = st.session_state.current_question
 if current_question_key != FINAL_KEY:
     question_data = questions.get(current_question_key)
@@ -258,7 +252,7 @@ if current_question_key != FINAL_KEY:
     st.subheader(question_data["question"])
     prev_value = st.session_state.user_answers.get(current_question_key, "")
     
-    # Widget de pregunta sin formulario
+    # Widget de question sans formulaire
     if question_data["options"]:
         try:
             index = question_data["options"].index(prev_value) if prev_value in question_data["options"] else 0
@@ -266,9 +260,9 @@ if current_question_key != FINAL_KEY:
             index = 0
         answer = st.radio("", question_data["options"], index=index, key=f"widget_{current_question_key}")
     else:
-        answer = st.text_input("", value=prev_value, key=f"widget_{current_question_key}", placeholder="Escriba su respuesta aquí...")
+        answer = st.text_input("", value=prev_value, key=f"widget_{current_question_key}", placeholder="Saisissez votre réponse ici...")
     
-    # Botones de navegación
+    # Boutons de navigation
     col_left, col_center, col_right = st.columns([1, 1, 1])
     
     with col_left:
@@ -279,9 +273,9 @@ if current_question_key != FINAL_KEY:
             st.rerun()
     
     with col_center:
-        if st.button("Guardar y salir", key=f"save_{current_question_key}"):
+        if st.button("Sauvegarder et quitter", key=f"save_{current_question_key}"):
             st.session_state.user_answers[current_question_key] = answer
-            st.success("Progreso guardado. Puedes descargar el JSON en la barra lateral.")
+            st.success("Progrès sauvegardé. Vous pouvez télécharger le JSON dans la barre latérale.")
     
     with col_right:
         if st.button("Suivant ➡️", key=f"next_{current_question_key}"):
@@ -292,42 +286,42 @@ if current_question_key != FINAL_KEY:
     st.markdown("</div>", unsafe_allow_html=True)
 else:
     st.header("Fin du formulaire 🏁")
-    st.markdown("Revise sus respuestas antes de generar las recomendaciones.")
+    st.markdown("Vérifiez vos réponses avant de générer les recommandations.")
     answers = st.session_state.user_answers
     for q in build_path(answers):
         st.markdown(f"**{questions[q]['question']}**")
-        st.write(answers.get(q, "_Sin respuesta_"))
-        if st.button(f"Editar", key=f"edit_{q}"):
+        st.write(answers.get(q, "_Pas de réponse_"))
+        if st.button(f"Modifier", key=f"edit_{q}"):
             st.session_state.current_question = q
             st.rerun()
 
-    # Reglas locales de recomendación
+    # Règles locales de recommandation
     recommendation = []
     if answers.get("product_code") == "Non":
-        recommendation.append("- Crear un nuevo código en el sistema antes de la primera orden.")
+        recommendation.append("- Créer un nouveau code dans le système avant la première commande.")
     if answers.get("supplier_conditions") == "Oui":
-        recommendation.append("- Analizar consumo histórico para ajustar hipótesis de reaprovisionamiento.")
+        recommendation.append("- Analyser la consommation historique pour ajuster les hypothèses de réapprovisionnement.")
     if answers.get("supplier_location") == "Grand export":
-        recommendation.append("- Anticipar plazos logísticos y crear buffer de seguridad.")
+        recommendation.append("- Anticiper les délais logistiques et créer un buffer de sécurité.")
     if answers.get("dotation") == "Oui":
-        recommendation.append("- Coordinar con 3PL para cumplir plazos imperativos.")
+        recommendation.append("- Coordonner avec le 3PL pour respecter les délais impératifs.")
 
     st.markdown("#### Recommandations automatiques")
-    if st.button("Generar recomendaciones (IA)"):
+    if st.button("Générer recommandations (IA)"):
         st.session_state.ai_recommendation = get_ai_recommendation(answers)
 
-    ai_text = st.session_state.ai_recommendation or "No se ha generado recomendación IA todavía."
-    full_reco = ("\n".join(recommendation) if recommendation else "Sin recomendaciones automáticas locales.") + "\n\nRecommandations IA :\n" + ai_text
+    ai_text = st.session_state.ai_recommendation or "Aucune recommandation IA générée pour l'instant."
+    full_reco = ("\n".join(recommendation) if recommendation else "Aucune recommandation automatique locale.") + "\n\nRecommandations IA :\n" + ai_text
     st.text_area("Recommandations", full_reco, height=300)
 
-    # Descargar Excel y JSON
-    if st.button("Descargar respuestas (Excel)"):
+    # Télécharger Excel et JSON
+    if st.button("Télécharger réponses (Excel)"):
         excel_bytes, excel_filename = save_answers_to_excel_bytes("\n".join(recommendation), ai_text, answers)
         if excel_bytes:
-            st.download_button("Descargar Excel", data=excel_bytes, file_name=excel_filename,
+            st.download_button("Télécharger Excel", data=excel_bytes, file_name=excel_filename,
                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         else:
-            st.error("Error al generar Excel.")
+            st.error("Erreur lors de la génération d'Excel.")
 
     json_bytes = json.dumps(answers, ensure_ascii=False, indent=2).encode("utf-8")
-    st.download_button("Descargar respuestas (JSON)", data=json_bytes, file_name="respuestas.json", mime="application/json")
+    st.download_button("Télécharger réponses (JSON)", data=json_bytes, file_name="reponses.json", mime="application/json")
